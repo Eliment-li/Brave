@@ -1,0 +1,16 @@
+opencv-python
+torch
+gymnasium
+gymnasium[atari,accept-rom-license,mujoco]
+matplotlib
+numpy
+pandas
+gputil
+
+pygame
+chardet
+openpyxl
+shared-memory-dict
+wandb
+swanlab
+scikit-learn
