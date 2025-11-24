@@ -6,7 +6,6 @@ matplotlib
 numpy
 pandas
 gputil
-
 pygame
 chardet
 openpyxl
