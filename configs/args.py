@@ -1,16 +1,15 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
+from configs.private.private_args import PrivateArgs
+
 
 @dataclass
 class BaseArgs:
-    exp_name: str = "base_experiment"
     seed: int = 1
     torch_deterministic: bool = True
     cuda: bool = True
-    track: bool = False
-    wandb_project_name: str = "cleanRL"
-    wandb_entity: Optional[str] = None
+    track: bool = True
     capture_video: bool = False
 
     env_id: str = "UnknownEnv"
@@ -46,4 +45,9 @@ class BaseArgs:
 class PpoAtariArgs(BaseArgs):
     exp_name: str = "ppo_atari"
     env_id: str = "BreakoutNoFrameskip-v4"
-
+    # wandb_project_name: str = "cleanRL"
+    # wandb_entity: Optional[str] = None
+    swanlab_key = PrivateArgs.swanlab_key
+    swanlab_project= 'Brave'
+    swanlab_workspace = 'Eliment-li'
+    swanlab_group = 'PPOAtari'
