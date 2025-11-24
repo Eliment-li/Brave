@@ -35,7 +35,7 @@ def make_env(env_id, idx, capture_video, run_name):
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
             env = gym.make(env_id)
-        CustomRewardWrapper(env, reward_fn=atari_sign_reward)
+        env = CustomRewardWrapper(env, reward_fn=atari_sign_reward)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = NoopResetEnv(env, noop_max=30)
         env = MaxAndSkipEnv(env, skip=4)
