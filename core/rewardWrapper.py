@@ -2,32 +2,57 @@
 import gymnasium as gym
 import numpy as np
 from typing import Callable, Tuple, Any
+from configs.args import PpoAtariArgs
 
+args = PpoAtariArgs().finalize()
 class CustomRewardWrapper(gym.Wrapper):
     """
     reward_fn 的签名示例:
       def reward_fn(obs, action, reward, next_obs, terminated, truncated, info) -> float
     """
-    def __init__(self, env: gym.Env, reward_fn: Callable[..., float]):
+    def __init__(self, env: gym.Env):
         super().__init__(env)
-        self.reward_fn = reward_fn
+        self.reward_recorder = []
+        self.score_recorder = []
+        self.best_score = 0
+        self.score = 0
 
     def step(self, action) -> Tuple[Any, float, bool, bool, dict]:
         obs, reward, terminated, truncated, info = self.env.step(action)
-        # 允许 reward_fn 使用旧 obs/next_obs/other 信息返回新 reward
-        try:
-            new_reward = self.reward_fn(None, action, reward, obs, terminated, truncated, info)
-        except TypeError:
-            # 兼容只传 (reward,) 或 (reward, info) 的简单函数
-            new_reward = self.reward_fn(reward)
+
+        self.score += reward
+        new_reward = reward
+        if self.score > self.best_score:
+            self.best_score = self.score
+            new_reward *=4
+        self.score_recorder.append(self.score)
+        self.reward_recorder.append(new_reward)
+
+        if terminated or truncated:
+            #plot reward_recorder and score_recorder on a graph and save it
+            import matplotlib.pyplot as plt
+            plt.figure(figsize=(12,6))
+            plt.plot(self.reward_recorder, label='Modified Reward', alpha=0.7)
+            plt.plot(self.score_recorder, label='Cumulative Score', alpha=0.7)
+            plt.xlabel('Steps')
+            plt.ylabel('Value')
+            plt.title('Reward and Score over Time')
+            plt.legend()
+            plt.grid()
+            plt.savefig(args.root_path/ 'results'/'reward_score_plot.png')
+            plt.close()
+
         return obs, new_reward, terminated, truncated, info
 
     def reset(self, **kwargs):
+        self.score = 0
+        self.best_score = 0
+        self.reward_recorder = []
+        self.score_recorder = []
         return self.env.reset(**kwargs)
 
 
-def Brave_reward():
-    pass
+
 
 
 

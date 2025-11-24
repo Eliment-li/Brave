@@ -23,11 +23,6 @@ from cleanrl_utils.atari_wrappers import (
 from configs.args import PpoAtariArgs
 from core.rewardWrapper import CustomRewardWrapper
 
-
-# 示例 reward 函数：Atari 常见做法（奖励取符号）
-def atari_sign_reward(_obs, _action, reward, _next_obs, _terminated, _truncated, _info):
-    return float(np.sign(reward))
-
 def make_env(env_id, idx, capture_video, run_name):
     def thunk():
         if capture_video and idx == 0:
@@ -35,17 +30,24 @@ def make_env(env_id, idx, capture_video, run_name):
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
             env = gym.make(env_id)
-        env = CustomRewardWrapper(env, reward_fn=atari_sign_reward)
+
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = NoopResetEnv(env, noop_max=30)
         env = MaxAndSkipEnv(env, skip=4)
+        '''
+        end episode when life lost(return done),but not reset the environment.
+        能让代理更快学会保命策略，同时保留完整 episode 的统计。
+        '''
         env = EpisodicLifeEnv(env)
         if "FIRE" in env.unwrapped.get_action_meanings():
             env = FireResetEnv(env)
+        if args.enable_brave:
+            env = CustomRewardWrapper(env)
         env = ClipRewardEnv(env)
         env = gym.wrappers.ResizeObservation(env, (84, 84))
         env = gym.wrappers.GrayScaleObservation(env)
         env = gym.wrappers.FrameStack(env, 4)
+
         return env
 
     return thunk
