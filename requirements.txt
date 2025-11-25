@@ -1,5 +1,4 @@
 opencv-python
-torch
 gymnasium
 gymnasium[atari,accept-rom-license,mujoco]
 matplotlib

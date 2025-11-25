@@ -22,7 +22,7 @@ class BaseArgs:
     capture_video: bool = False
 
     env_id: str = "UnknownEnv"
-    total_timesteps: int = 100000
+    total_timesteps: int = 1000000*200
     learning_rate: float = 2.5e-4
     num_envs: int = 8
     num_steps: int = 128
@@ -63,11 +63,11 @@ class PpoAtariArgs(BaseArgs):
     swanlab_workspace = 'Eliment-li'
     swanlab_group = 'PPOAtari'
 
-    enable_brave: bool = True
+    enable_brave: bool = False
 
 
 
 
 if __name__ == '__main__':
     print(get_root_path())
-    print(torch.cuda.is_available())
+    print(torch.version.cuda)
