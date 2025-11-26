@@ -2,6 +2,7 @@
 import os
 import random
 import time
+import traceback
 
 import gymnasium as gym
 import numpy as np
@@ -88,10 +89,9 @@ class Agent(nn.Module):
         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
 
 
-if __name__ == "__main__":
-    args = tyro.cli(PpoAtariArgs)
-    args.finalize()
-    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+def train(args,envs, run_name=None):
+    if run_name is None:
+        run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     if args.track:
         swanlab.init(
             project=args.swanlab_project,
@@ -108,9 +108,6 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
-    )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
     agent = Agent(envs).to(device)
@@ -161,10 +158,10 @@ if __name__ == "__main__":
                     if info and "episode" in info:
                         print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
                         swanlab.log(data={
-                            "charts/episodic_return":info["episode"]["r"],
-                            "charts/episodic_length":info["episode"]["l"]
+                            "charts/episodic_return": info["episode"]["r"],
+                            "charts/episodic_length": info["episode"]["l"]
                         },
-                        step = global_step
+                            step=global_step
                         )
                         # writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         # writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
@@ -266,5 +263,32 @@ if __name__ == "__main__":
             },
             step=global_step
         )
-    envs.close()
-    swanlab.finish()
+    # NOTE: do not close envs or call swanlab.finish() here;
+    # cleanup will be handled in the caller to avoid double-close or undefined variables.
+    # ...existing code...
+
+if __name__ == "__main__":
+    args = tyro.cli(PpoAtariArgs)
+    args.finalize()
+    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    envs = None
+    try:
+        envs = gym.vector.SyncVectorEnv(
+            [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
+        )
+        train(args, envs, run_name)
+    except KeyboardInterrupt:
+        print("Interrupted by user. Exiting gracefully...")
+    except Exception as e:
+        print("Unhandled exception in main:")
+        traceback.print_exc()
+    finally:
+        if envs is not None:
+            try:
+                envs.close()
+            except Exception:
+                pass
+        try:
+            swanlab.finish()
+        except Exception:
+            pass
