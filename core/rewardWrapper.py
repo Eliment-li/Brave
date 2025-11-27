@@ -28,21 +28,24 @@ class CustomRewardWrapper(gym.Wrapper):
         self.score_recorder.append(self.score)
         self.reward_recorder.append(new_reward)
 
-        if terminated or truncated:
-            #plot reward_recorder and score_recorder on a graph and save it
-            import matplotlib.pyplot as plt
-            plt.figure(figsize=(12,6))
-            plt.plot(self.reward_recorder, label='Modified Reward', alpha=0.7)
-            plt.plot(self.score_recorder, label='Cumulative Score', alpha=0.7)
-            plt.xlabel('Steps')
-            plt.ylabel('Value')
-            plt.title('Reward and Score over Time')
-            plt.legend()
-            plt.grid()
-            plt.savefig(args.root_path/ 'results'/'reward_score_plot.png')
-            plt.close()
-
         return obs, new_reward, terminated, truncated, info
+
+
+    def close(self):
+        # plot reward_recorder and score_recorder on a graph and save it
+        import matplotlib.pyplot as plt
+        plt.figure(figsize=(12, 6))
+        plt.plot(self.reward_recorder, label='Modified Reward', alpha=0.7)
+        plt.plot(self.score_recorder, label='Cumulative Score', alpha=0.7)
+        plt.xlabel('Steps')
+        plt.ylabel('Value')
+        plt.title('Reward and Score over Time')
+        plt.legend()
+        plt.grid()
+        plt.savefig(args.root_path / 'results' / 'reward_score_plot.png')
+        plt.close()
+
+
 
     def reset(self, **kwargs):
         self.score = 0

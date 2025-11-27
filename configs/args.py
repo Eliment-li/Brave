@@ -12,7 +12,8 @@ def get_root_path():
     root_dir = root_dir[:-8]
     return root_dir
 
-
+K=1000
+M=1000*K
 @dataclass
 class BaseArgs:
     seed: int = 1
@@ -22,7 +23,7 @@ class BaseArgs:
     capture_video: bool = False
 
     env_id: str = "UnknownEnv"
-    total_timesteps: int = 1000000*200
+    total_timesteps: int = 20*M
     learning_rate: float = 2.5e-4
     num_envs: int = 8
     num_steps: int = 128
@@ -63,7 +64,7 @@ class PpoAtariArgs(BaseArgs):
     swanlab_workspace = 'Eliment-li'
     swanlab_group = 'PPOAtari'
 
-    enable_brave: bool = False
+    enable_brave: bool = True
 
 
 

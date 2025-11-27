@@ -129,6 +129,7 @@ def train(args,envs, run_name=None):
     next_done = torch.zeros(args.num_envs).to(device)
 
     for iteration in range(1, args.num_iterations + 1):
+        print(f'iteration{iteration}')
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
@@ -136,6 +137,7 @@ def train(args,envs, run_name=None):
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
+            #print(f'iteration {iteration}, step {step}')
             global_step += args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
@@ -156,13 +158,14 @@ def train(args,envs, run_name=None):
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info and "episode" in info:
-                        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                        swanlab.log(data={
-                            "charts/episodic_return": info["episode"]["r"],
-                            "charts/episodic_length": info["episode"]["l"]
-                        },
-                            step=global_step
-                        )
+                        #print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+                        if args.track:
+                            swanlab.log(data={
+                                "charts/episodic_return": info["episode"]["r"],
+                                "charts/episodic_length": info["episode"]["l"]
+                            },
+                                step=global_step
+                            )
                         # writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         # writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
 
@@ -194,6 +197,7 @@ def train(args,envs, run_name=None):
         b_inds = np.arange(args.batch_size)
         clipfracs = []
         for epoch in range(args.update_epochs):
+            print(f'iteration {iteration}, epoch {epoch}')
             np.random.shuffle(b_inds)
             for start in range(0, args.batch_size, args.minibatch_size):
                 end = start + args.minibatch_size
@@ -249,20 +253,21 @@ def train(args,envs, run_name=None):
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
         sps = int(global_step / (time.time() - start_time))
-        swanlab.log(
-            data={
-                "charts/learning_rate": optimizer.param_groups[0]["lr"],
-                "losses/value_loss": v_loss.item(),
-                "losses/policy_loss": pg_loss.item(),
-                "losses/entropy": entropy_loss.item(),
-                "losses/old_approx_kl": old_approx_kl.item(),
-                "losses/approx_kl": approx_kl.item(),
-                "losses/clipfrac": np.mean(clipfracs),
-                "losses/explained_variance": explained_var,
-                "charts/SPS": int(sps),
-            },
-            step=global_step
-        )
+        if args.track:
+            swanlab.log(
+                data={
+                    "charts/learning_rate": optimizer.param_groups[0]["lr"],
+                    "losses/value_loss": v_loss.item(),
+                    "losses/policy_loss": pg_loss.item(),
+                    "losses/entropy": entropy_loss.item(),
+                    "losses/old_approx_kl": old_approx_kl.item(),
+                    "losses/approx_kl": approx_kl.item(),
+                    "losses/clipfrac": np.mean(clipfracs),
+                    "losses/explained_variance": explained_var,
+                    "charts/SPS": int(sps),
+                },
+                step=global_step
+            )
     # NOTE: do not close envs or call swanlab.finish() here;
     # cleanup will be handled in the caller to avoid double-close or undefined variables.
     # ...existing code...
@@ -279,6 +284,7 @@ if __name__ == "__main__":
         train(args, envs, run_name)
     except KeyboardInterrupt:
         print("Interrupted by user. Exiting gracefully...")
+        envs.close()
     except Exception as e:
         print("Unhandled exception in main:")
         traceback.print_exc()
