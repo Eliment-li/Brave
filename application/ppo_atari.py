@@ -42,9 +42,9 @@ def make_env(env_id, idx, capture_video, run_name):
         env = EpisodicLifeEnv(env)
         if "FIRE" in env.unwrapped.get_action_meanings():
             env = FireResetEnv(env)
+        env = ClipRewardEnv(env)
         if args.enable_brave:
             env = CustomRewardWrapper(env)
-        env = ClipRewardEnv(env)
         env = gym.wrappers.ResizeObservation(env, (84, 84))
         env = gym.wrappers.GrayScaleObservation(env)
         env = gym.wrappers.FrameStack(env, 4)
