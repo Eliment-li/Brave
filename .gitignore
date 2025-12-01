@@ -1,3 +1,7 @@
 /configs/private/*
 /private/
 /configs/private/private_args.py
+
+*.idea/
+*.vscode/
+*.log

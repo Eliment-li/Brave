@@ -12,3 +12,4 @@ shared-memory-dict
 wandb
 swanlab
 scikit-learn
+arrow
