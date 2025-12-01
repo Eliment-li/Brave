@@ -3,9 +3,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+import arrow
 import torch
 
 from configs.private.private_args import PrivateArgs
+from utils.str_util import get_animals_name
+
 
 def get_root_path():
     root_dir = os.path.dirname(os.path.abspath(__file__))
@@ -50,6 +53,7 @@ class BaseArgs:
         self.batch_size = int(self.num_envs * self.num_steps)
         self.minibatch_size = int(self.batch_size // self.num_minibatches)
         self.num_iterations = self.total_timesteps // self.batch_size
+        self.experiment_name = get_animals_name() +'-'+ arrow.now().format('MMDD-HH:MM')
         return self
 
 
@@ -65,6 +69,12 @@ class PpoAtariArgs(BaseArgs):
     swanlab_group = 'PPOAtari'
 
     enable_brave: bool = True
+    def finalize(self):
+        super().finalize()
+        if self.enable_brave:
+            self.experiment_name += '-brave'
+        #get git version number
+        return self
 
 
 

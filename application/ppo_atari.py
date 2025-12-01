@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import tyro
+import arrow
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
@@ -23,6 +24,8 @@ from cleanrl_utils.atari_wrappers import (
 )
 from configs.args import PpoAtariArgs
 from core.rewardWrapper import CustomRewardWrapper
+from utils.str_util import get_animals_name
+
 
 def make_env(env_id, idx, capture_video, run_name):
     def thunk():
@@ -42,9 +45,8 @@ def make_env(env_id, idx, capture_video, run_name):
         env = EpisodicLifeEnv(env)
         if "FIRE" in env.unwrapped.get_action_meanings():
             env = FireResetEnv(env)
-        if args.enable_brave:
-            env = CustomRewardWrapper(env)
-        env = ClipRewardEnv(env)
+        env = CustomRewardWrapper(env)
+        # env = ClipRewardEnv(env)
         env = gym.wrappers.ResizeObservation(env, (84, 84))
         env = gym.wrappers.GrayScaleObservation(env)
         env = gym.wrappers.FrameStack(env, 4)
@@ -89,15 +91,13 @@ class Agent(nn.Module):
         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
 
 
-def train(args,envs, run_name=None):
-    if run_name is None:
-        run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
-    if args.track:
-        swanlab.init(
+def train(args,envs, run_name):
+    swanlab.init(
             project=args.swanlab_project,
             workspace=args.swanlab_workspace,
             group=args.swanlab_group,
-            config=vars(args)
+            config=vars(args),
+            experiment_name = args.experiment_name
         )
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
@@ -129,7 +129,6 @@ def train(args,envs, run_name=None):
     next_done = torch.zeros(args.num_envs).to(device)
 
     for iteration in range(1, args.num_iterations + 1):
-        print(f'iteration{iteration}')
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
@@ -137,7 +136,6 @@ def train(args,envs, run_name=None):
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
-            #print(f'iteration {iteration}, step {step}')
             global_step += args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
@@ -197,7 +195,6 @@ def train(args,envs, run_name=None):
         b_inds = np.arange(args.batch_size)
         clipfracs = []
         for epoch in range(args.update_epochs):
-            print(f'iteration {iteration}, epoch {epoch}')
             np.random.shuffle(b_inds)
             for start in range(0, args.batch_size, args.minibatch_size):
                 end = start + args.minibatch_size

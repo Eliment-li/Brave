@@ -19,16 +19,18 @@ class CustomRewardWrapper(gym.Wrapper):
 
     def step(self, action) -> Tuple[Any, float, bool, bool, dict]:
         obs, reward, terminated, truncated, info = self.env.step(action)
-
+        reward = np.sign(float(reward))  # bin reward to +1 -1 or 0
         self.score += reward
-        new_reward = reward
-        if self.score > self.best_score:
+        brave_reward = reward
+        if self.score > self.best_score and reward >0:
             self.best_score = self.score
-            new_reward *=4
+            brave_reward =reward*4
         self.score_recorder.append(self.score)
-        self.reward_recorder.append(new_reward)
+        self.reward_recorder.append(brave_reward)
 
-        return obs, new_reward, terminated, truncated, info
+        if args.enable_brave:
+            reward = brave_reward
+        return obs, reward, terminated, truncated, info
 
 
     def close(self):
