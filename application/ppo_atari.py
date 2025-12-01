@@ -23,7 +23,7 @@ from cleanrl_utils.atari_wrappers import (
     NoopResetEnv,
 )
 from configs.args import PpoAtariArgs
-from core.rewardWrapper import CustomRewardWrapper
+from core.rewardWrapper import BreakoutRewardWrapper
 from utils.str_util import get_animals_name
 
 
@@ -45,7 +45,7 @@ def make_env(env_id, idx, capture_video, run_name):
         env = EpisodicLifeEnv(env)
         if "FIRE" in env.unwrapped.get_action_meanings():
             env = FireResetEnv(env)
-        env = CustomRewardWrapper(env)
+        env = BreakoutRewardWrapper(env)
         # env = ClipRewardEnv(env)
         env = gym.wrappers.ResizeObservation(env, (84, 84))
         env = gym.wrappers.GrayScaleObservation(env)
@@ -92,13 +92,14 @@ class Agent(nn.Module):
 
 
 def train(args,envs, run_name):
-    swanlab.init(
-            project=args.swanlab_project,
-            workspace=args.swanlab_workspace,
-            group=args.swanlab_group,
-            config=vars(args),
-            experiment_name = args.experiment_name
-        )
+    if args.track:
+        swanlab.init(
+                project=args.swanlab_project,
+                workspace=args.swanlab_workspace,
+                group=args.swanlab_group,
+                config=vars(args),
+                experiment_name = args.experiment_name
+            )
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -127,8 +128,14 @@ def train(args,envs, run_name):
     next_obs, _ = envs.reset(seed=args.seed)
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
+    last_progress_bucket = -1
 
     for iteration in range(1, args.num_iterations + 1):
+        progress_bucket = int((iteration * 20) / args.num_iterations)
+        if progress_bucket > last_progress_bucket:
+            last_progress_bucket = progress_bucket
+            print(f"Training process: {progress_bucket * 5}%")
+
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
@@ -287,11 +294,15 @@ if __name__ == "__main__":
         traceback.print_exc()
     finally:
         if envs is not None:
-            try:
-                envs.close()
-            except Exception:
-                pass
-        try:
+            first_env = envs.envs[0]
+            # 按你 wrap 的顺序一层层取，直到拿到 BreakoutRewardWrapper
+            from core.rewardWrapper import BreakoutRewardWrapper
+
+            cur = first_env
+            while cur is not None and not isinstance(cur, BreakoutRewardWrapper):
+                cur = getattr(cur, "env", None)
+            if isinstance(cur, BreakoutRewardWrapper):
+                cur.save_plots()
+            envs.close()
+        if args.track:
             swanlab.finish()
-        except Exception:
-            pass
