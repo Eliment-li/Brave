@@ -19,16 +19,16 @@ K=1000
 M=1000*K
 @dataclass
 class BaseArgs:
+    track: bool = True
     seed: int = 1
     torch_deterministic: bool = True
     cuda: bool = True
-    track: bool = True
     capture_video: bool = False
 
     env_id: str = "UnknownEnv"
-    total_timesteps: int = 20*M
+    total_timesteps: int =20*M
     learning_rate: float = 2.5e-4
-    num_envs: int = 8
+    num_envs: int = 16
     num_steps: int = 128
     anneal_lr: bool = True
     gamma: float = 0.99
@@ -43,8 +43,8 @@ class BaseArgs:
     max_grad_norm: float = 0.5
     target_kl: Optional[float] = None
 
-    batch_size: int = field(init=False, default=0)
-    minibatch_size: int = field(init=False, default=0)
+    batch_size: int = field(init=False, default=1024)
+    minibatch_size: int = field(init=False, default=256)
     num_iterations: int = field(init=False, default=0)
 
     root_path:Path = Path(get_root_path())
@@ -53,7 +53,7 @@ class BaseArgs:
         self.batch_size = int(self.num_envs * self.num_steps)
         self.minibatch_size = int(self.batch_size // self.num_minibatches)
         self.num_iterations = self.total_timesteps // self.batch_size
-        self.experiment_name = get_animals_name() +'-'+ arrow.now().format('MMDD-HH:MM')
+        self.experiment_name = get_animals_name() +'_'+ arrow.now().format('MMDD_HHMM')
         return self
 
 
@@ -68,11 +68,11 @@ class PpoAtariArgs(BaseArgs):
     swanlab_workspace = 'Eliment-li'
     swanlab_group = 'PPOAtari'
 
-    enable_brave: bool = True
+    enable_brave: bool = False
     def finalize(self):
         super().finalize()
         if self.enable_brave:
-            self.experiment_name += '-brave'
+            self.experiment_name += '_brave'
         #get git version number
         return self
 
