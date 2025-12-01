@@ -37,8 +37,8 @@ class CustomRewardWrapper(gym.Wrapper):
         # plot reward_recorder and score_recorder on a graph and save it
         import matplotlib.pyplot as plt
         plt.figure(figsize=(12, 6))
-        plt.plot(self.reward_recorder, label='Modified Reward', alpha=0.7)
-        plt.plot(self.score_recorder, label='Cumulative Score', alpha=0.7)
+        plt.plot(self.reward_recorder, label='Reward', alpha=0.7)
+        plt.plot(self.score_recorder, label='Score', alpha=0.7)
         plt.xlabel('Steps')
         plt.ylabel('Value')
         plt.title('Reward and Score over Time')
