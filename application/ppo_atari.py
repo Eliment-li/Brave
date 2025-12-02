@@ -1,9 +1,7 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_ataripy
-import os
 import random
 import time
 import traceback
-
 import gymnasium as gym
 import numpy as np
 import swanlab
@@ -11,21 +9,16 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import tyro
-import arrow
 from torch.distributions.categorical import Categorical
-from torch.utils.tensorboard import SummaryWriter
-
+from core.rewardWrapper import BreakoutRewardWrapper
 from cleanrl_utils.atari_wrappers import (
-    ClipRewardEnv,
     EpisodicLifeEnv,
     FireResetEnv,
     MaxAndSkipEnv,
     NoopResetEnv,
 )
 from configs.args import PpoAtariArgs
-from core.rewardWrapper import BreakoutRewardWrapper
-from utils.str_util import get_animals_name
-
+from utils.model.checkpoint import save_checkpoint
 
 def make_env(env_id, idx, capture_video, run_name):
     def thunk():
@@ -134,6 +127,11 @@ def train(args,envs, run_name):
         progress_bucket = int((iteration * 20) / args.num_iterations)
         if progress_bucket > last_progress_bucket:
             last_progress_bucket = progress_bucket
+            #save checkpoint
+            try:
+                save_checkpoint(run_name, iteration, global_step, agent, optimizer, args)
+            except Exception as e:
+                print(f"Failed to save checkpoint: {e}")
             print(f"Training process: {progress_bucket * 5}%")
 
         # Annealing the rate if instructed to do so.
@@ -296,8 +294,6 @@ if __name__ == "__main__":
         if envs is not None:
             first_env = envs.envs[0]
             # 按你 wrap 的顺序一层层取，直到拿到 BreakoutRewardWrapper
-            from core.rewardWrapper import BreakoutRewardWrapper
-
             cur = first_env
             while cur is not None and not isinstance(cur, BreakoutRewardWrapper):
                 cur = getattr(cur, "env", None)
