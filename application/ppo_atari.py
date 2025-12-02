@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import tyro
+from swanlab.swanlab_settings import settings
 from torch.distributions.categorical import Categorical
 from core.rewardWrapper import BreakoutRewardWrapper
 from cleanrl_utils.atari_wrappers import (
@@ -91,7 +92,11 @@ def train(args,envs, run_name):
                 workspace=args.swanlab_workspace,
                 group=args.swanlab_group,
                 config=vars(args),
-                experiment_name = args.experiment_name
+                experiment_name = args.experiment_name,
+                settings = swanlab.Settings(
+                    backup = False
+                )
+
             )
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
