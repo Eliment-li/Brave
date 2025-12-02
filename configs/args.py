@@ -19,16 +19,13 @@ K=1000
 M=1000*K
 @dataclass
 class BaseArgs:
-    track: bool = True
     seed: int = 1
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = False
-
     env_id: str = "UnknownEnv"
-    total_timesteps: int =20*M
     learning_rate: float = 2.5e-4
-    num_envs: int = 16
+    num_envs: int = 1
     num_steps: int = 128
     anneal_lr: bool = True
     gamma: float = 0.99
@@ -56,19 +53,18 @@ class BaseArgs:
         self.experiment_name = get_animals_name() +'_'+ arrow.now().format('MMDD_HHMM')
         return self
 
-
 @dataclass
 class PpoAtariArgs(BaseArgs):
     exp_name: str = "ppo_atari"
     env_id: str = "BreakoutNoFrameskip-v4"
-    # wandb_project_name: str = "cleanRL"
-    # wandb_entity: Optional[str] = None
     swanlab_key = PrivateArgs.swanlab_key
     swanlab_project= 'Brave'
     swanlab_workspace = 'Eliment-li'
     swanlab_group = 'PPOAtari'
-
+    track: bool = True
     enable_brave: bool = True
+    total_timesteps: int = 10*M
+
     def finalize(self):
         super().finalize()
         if self.enable_brave:
