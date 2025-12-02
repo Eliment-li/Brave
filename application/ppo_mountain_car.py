@@ -10,6 +10,7 @@ import traceback
 
 import gymnasium as gym
 import numpy as np
+import swanlab
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -17,8 +18,10 @@ import tyro
 from torch.distributions.categorical import Categorical
 
 from core.brs_mountaincar_wrapper import BRSRewardWrapper
-from configs.args import PpoAtariArgs  # 你已有的，可以共用
+from configs.args import PpoAtariArgs
 
+args = tyro.cli(PpoAtariArgs)
+args.finalize()
 def make_env(env_id, idx, capture_video, run_name, gamma):
     def thunk():
         if capture_video and idx == 0:
@@ -28,7 +31,8 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
             env = gym.make(env_id)
 
         env = gym.wrappers.RecordEpisodeStatistics(env)
-        env = BRSRewardWrapper(env, gamma=gamma)
+        if args.enable_brave:
+            env = BRSRewardWrapper(env, gamma=gamma)
         return env
     return thunk
 
@@ -63,6 +67,17 @@ class Agent(nn.Module):
         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
 
 def train(args, envs, run_name):
+    if args.track:
+        swanlab.init(
+            project=args.swanlab_project,
+            workspace=args.swanlab_workspace,
+            group=args.swanlab_group,
+            config=vars(args),
+            experiment_name=args.experiment_name,
+            settings=swanlab.Settings(
+                backup=False
+            )
+        )
     # seeding
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -207,17 +222,28 @@ def train(args, envs, run_name):
             f"SPS={sps}, "
             f"explained_var={explained_var:.3f}"
         )
+        if args.track:
+            swanlab.log(
+                data={
+                    "charts/learning_rate": optimizer.param_groups[0]["lr"],
+                    "charts/return_mean": y_true.mean(),
+                    "losses/value_loss": v_loss.item(),
+                    "losses/policy_loss": pg_loss.item(),
+                    "losses/entropy": entropy_loss.item(),
+                    "losses/old_approx_kl": old_approx_kl.item(),
+                    "losses/approx_kl": approx_kl.item(),
+                    "losses/clipfrac": np.mean(clipfracs),
+                    "losses/explained_variance": explained_var,
+                    "charts/SPS": int(sps),
+                },
+                step=global_step
+            )
 
 def main():
-    args = tyro.cli(PpoAtariArgs)
     # 覆盖为 MountainCar 的设置（也可以在 args 里配置）
     args.env_id = "MountainCar-v0"
-    args.num_envs = 8
-    args.num_steps = 128
-    args.num_iterations = 1000
-    args.batch_size = args.num_envs * args.num_steps
-    args.minibatch_size = args.batch_size // 4
-
+    args.swanlab_group = "MountainCarV0"
+    args.total_timesteps=4096
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     envs = None
     try:
