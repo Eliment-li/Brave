@@ -5,13 +5,13 @@ import torch.optim as optim
 
 from configs.args import PpoAtariArgs
 from utils.model.checkpoint import load_checkpoint
-from application.ppo_atari import Agent as TrainAgent, make_env
+from application.ppo_mountain_car import Agent as TrainAgent, make_env
 
 
 def make_eval_envs(env_id: str, run_name: str = "eval_dummy"):
     # 与训练时相同的封装，只是 num_envs=1，且不录视频
     return gym.vector.SyncVectorEnv(
-        [make_env(env_id, 0, True, run_name)]
+        [make_env(env_id, 0, True, run_name,0.99)]
     )
 
 
@@ -24,8 +24,7 @@ class EvalAgent(TrainAgent):
 
 
 def agent_factory(device: torch.device):
-    args = PpoAtariArgs().finalize()
-    envs = make_eval_envs(args.env_id)
+    envs = make_eval_envs('MountainCar-v0')
     agent = EvalAgent(envs).to(device)
     return agent
 
@@ -41,6 +40,7 @@ def evaluate_model(
     device: str | None = None,
 ):
     args = PpoAtariArgs().finalize()
+    args.env_id ='MountainCar-v0'
     device = torch.device(device or ("cuda" if torch.cuda.is_available() and args.cuda else "cpu"))
 
     # 创建与训练一致的 envs（这里只用 1 个 env）
@@ -76,7 +76,7 @@ def evaluate_model(
 
 
 if __name__ == "__main__":
-    ckpt_path = r"D:\project\Brave\results\checkpoints\BreakoutNoFrameskip-v4__ppo_atari__1__1764639568\checkpoint_iter2_step2048.pt"
+    ckpt_path = r"D:\project\Brave\results\checkpoints\MountainCar-v0__ppo_atari__1__1764675410\checkpoint_iter488_step997376.pt"
     evaluate_model(
         ckpt_path=ckpt_path,
         episodes=3,
