@@ -46,7 +46,9 @@ class BreakoutRewardWrapper(gym.Wrapper):
                 and reward > 0
                 and args.enable_brave):
             self.best_score_record = self.current_score
-            reward = (self.peak_discounted_return - self.discounted_return) * 1.2
+            reward = (self.peak_discounted_return - self.discounted_return) * 1.1
+            if reward<1:
+                reward = 1
 
         self.discounted_return = self.discounted_return * self.discount_factor + reward
         self.score_history.append(self.current_score)
