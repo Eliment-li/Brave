@@ -2,7 +2,7 @@ import numpy as np
 import gymnasium as gym
 
 class BRSRewardWrapper(gym.Wrapper):
-    def __init__(self, env, gamma: float = 0.99, beta_min: float = 1.1):
+    def __init__(self, env, gamma: float = 0.99, beta_min: float = 1.01):
         super().__init__(env)
         self.gamma = gamma
         self.beta_min = beta_min
@@ -17,6 +17,7 @@ class BRSRewardWrapper(gym.Wrapper):
         obs, info = self.env.reset(**kwargs)
         pos = self._get_position()
         self.C0 = self._cost(pos)
+        self.C_star = np.inf
         self.R_t = 0.0
         if not np.isfinite(self.R_max):
             self.R_max = 0.0
@@ -24,7 +25,7 @@ class BRSRewardWrapper(gym.Wrapper):
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
-
+        info["reward"] = reward
         # 原始 MountainCar 的 reward 是 -1 每步；我们这里不用它，改用 cost-aware r_t
         pos = self._get_position()
         C_t = self._cost(pos)
@@ -42,9 +43,11 @@ class BRSRewardWrapper(gym.Wrapper):
         brs_reward = r_t
         if C_t < self.C_star:
             # 计算 bonus，保证 RDCR 超过历史最大
-            beta = max(self.beta_min, (self.C_star - C_t) / (self.C_star + 1e-8))
+            beta = self.beta_min#max(self.beta_min, (self.C_star - C_t) / (self.C_star + 1e-8))
             bonus = beta * (self.R_max - self.gamma * self.R_t)
             brs_reward = bonus
+            if brs_reward >10:
+                brs_reward =10.0
 
             # 更新 C* 与 R_max, R_t
             self.C_star = C_t
@@ -52,7 +55,7 @@ class BRSRewardWrapper(gym.Wrapper):
             self.R_max = max(self.R_max, self.R_t)
 
         # 用 BRS 后的 reward 替代原 reward
-        reward = float(brs_reward)
+        reward = float(max(brs_reward,reward,1e-5))  # 保证 reward 不小于原始 reward
         info["brs_reward"] = reward
         info["cost"] = C_t
         info["C_star"] = self.C_star
