@@ -68,15 +68,13 @@ class PpoAtariArgs(BaseArgs):
     swanlab_workspace = 'Eliment-li'
     swanlab_group = 'PPOAtari'
 
-    enable_brave: bool = False
+    enable_brave: bool = True
     def finalize(self):
         super().finalize()
         if self.enable_brave:
             self.experiment_name += '_brave'
         #get git version number
         return self
-
-
 
 
 if __name__ == '__main__':
