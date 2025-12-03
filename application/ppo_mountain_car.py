@@ -347,6 +347,8 @@ def main():
     finally:
         if envs is not None:
             envs.close()
+        if swanlab:
+            swanlab.finish()
 
 if __name__ == "__main__":
     main()
