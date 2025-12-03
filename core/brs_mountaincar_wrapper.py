@@ -9,18 +9,21 @@ class BRSRewardWrapper(gym.Wrapper):
         self.goal_pos = self.env.unwrapped.goal_position  # MountainCar 自带
         # 这些变量按 episode / 全局维护
         self.C0 = None           # 当前 episode 的初始 cost
+        self.C_Last = None       # c_{t-1}
         self.C_star = np.inf     # 历史最小 cost（全局）
         self.R_t = 0.0           # 当前 episode RDCR
         self.R_max = -np.inf     # 历史最大 RDCR
+
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
         pos = self._get_position()
         self.C0 = self._cost(pos)
         self.C_star = np.inf
+
         self.R_t = 0.0
-        if not np.isfinite(self.R_max):
-            self.R_max = 0.0
+        self.R_max = -np.inf
+
         return obs, info
 
     def step(self, action):
@@ -53,9 +56,8 @@ class BRSRewardWrapper(gym.Wrapper):
             self.C_star = C_t
             self.R_t = self.gamma * self.R_t + bonus
             self.R_max = max(self.R_max, self.R_t)
-
-        # 用 BRS 后的 reward 替代原 reward
-        reward = float(max(brs_reward,reward,1e-5))  # 保证 reward 不小于原始 reward
+            # 用 BRS 后的 reward 替代原 reward
+            reward = float(max(brs_reward,reward,1e-5))  # 保证 reward 不小于原始 reward
         info["brs_reward"] = reward
         info["cost"] = C_t
         info["C_star"] = self.C_star
