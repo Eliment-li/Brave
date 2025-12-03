@@ -76,9 +76,9 @@ def evaluate_model(
 
 
 if __name__ == "__main__":
-    ckpt_path = r"D:\project\Brave\results\checkpoints\MountainCar-v0__ppo_atari__1__1764675410\checkpoint_iter488_step997376.pt"
+    ckpt_path = r"D:\project\Brave\results\checkpoints\MountainCar-v0__ppo_atari__3851__1764768735\checkpoint_iter78_step9856.pt"
     evaluate_model(
         ckpt_path=ckpt_path,
-        episodes=3,
-        seed=1,
+        episodes=6,
+        seed=3851,
     )

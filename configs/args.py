@@ -19,15 +19,15 @@ K=1000
 M=1000*K
 @dataclass
 class BaseArgs:
-    seed: int = 1
+    seed: int = -1
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = False
     env_id: str = "UnknownEnv"
-    learning_rate: float = 2.5e-4
+    learning_rate: float = 1e-4
     num_envs: int = 1
     num_steps: int = 128
-    anneal_lr: bool = True
+    anneal_lr: bool = False
     gamma: float = 0.99
     gae_lambda: float = 0.95
     num_minibatches: int = 4
@@ -40,17 +40,22 @@ class BaseArgs:
     max_grad_norm: float = 0.5
     target_kl: Optional[float] = None
 
-    batch_size: int = field(init=False, default=1024)
-    minibatch_size: int = field(init=False, default=256)
+    batch_size: int = field(init=False, default=256)
+    minibatch_size: int = field(init=False, default=32)
     num_iterations: int = field(init=False, default=0)
 
     root_path:Path = Path(get_root_path())
 
     def finalize(self):
+        #set seed to random value if seed is -1
+        if self.seed == -1:
+            self.seed = torch.randint(0, 10000, (1,)).item()
+        print(f"Using seed: {self.seed}")
         self.batch_size = int(self.num_envs * self.num_steps)
         self.minibatch_size = int(self.batch_size // self.num_minibatches)
         self.num_iterations = self.total_timesteps // self.batch_size
-        self.experiment_name = get_animals_name() +'_'+ arrow.now().format('MMDD_HHMM')
+        self.experiment_name = get_animals_name() +'_'+ arrow.now().format('MMDD_HHmm')
+
         return self
 
 @dataclass
@@ -63,7 +68,7 @@ class PpoAtariArgs(BaseArgs):
     swanlab_group = 'PPOAtari'
     track: bool = True
     enable_brave: bool = True
-    total_timesteps: int = 10*M
+    total_timesteps: int = 10*K
 
     def finalize(self):
         super().finalize()
@@ -76,3 +81,4 @@ class PpoAtariArgs(BaseArgs):
 if __name__ == '__main__':
     print(get_root_path())
     print(torch.version.cuda)
+    print(torch.randint(0, 10000, (1,)).item())

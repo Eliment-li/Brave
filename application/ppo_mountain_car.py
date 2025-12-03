@@ -162,7 +162,7 @@ def train(args, envs, run_name):
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
-        C_star = 0
+        C_min = 0
         cost_val = 0
         rdcr_val = 0
         for step in range(args.num_steps):
@@ -179,21 +179,22 @@ def train(args, envs, run_name):
             next_obs_np, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
             env_idx = 0
             brs_val = get_info_val(infos, "brs_reward", env_idx)
-            C_star = get_info_val(infos, "C_star", env_idx)
+            C_min = get_info_val(infos, "C_min", env_idx)
             cost_val = get_info_val(infos, "cost", env_idx)
             rdcr_val = get_info_val(infos, "RDCR", env_idx)
             ori_reward_val = get_info_val(infos, "reward", env_idx)
-            if global_step <10000:
-                swanlab.log(
-                    data={
-                        "debug/brs_reward": brs_val,
-                        "debug/cost": cost_val,
-                        "debug/rdcr": rdcr_val,
-                        "debug/ori_reward": ori_reward_val,
-                        "debug/C_star": C_star,
-                    },
-                    step=global_step
-                )
+            if global_step <50000:
+                if args.track:
+                    swanlab.log(
+                        data={
+                            "debug/brs_reward": brs_val,
+                            "debug/cost": cost_val,
+                            "debug/rdcr": rdcr_val,
+                            "debug/ori_reward": ori_reward_val,
+                            "debug/C_min": C_min,
+                        },
+                        step=global_step
+                    )
             # brs_reward.append(float(brs_val))
             # cost.append(float(cost_val))
             # RDCR.append(float(rdcr_val))
@@ -306,7 +307,7 @@ def train(args, envs, run_name):
                     "losses/clipfrac": np.mean(clipfracs),
                     "losses/explained_variance": explained_var,
                     "charts/SPS": int(sps),
-                    "debug/C_star": C_star,
+                    "debug/C_min": C_min,
                     "debug/cost": cost_val,
                     "debug/rdcr": rdcr_val,
                 },
@@ -347,7 +348,7 @@ def main():
     finally:
         if envs is not None:
             envs.close()
-        if swanlab:
+        if args.track:
             swanlab.finish()
 
 if __name__ == "__main__":

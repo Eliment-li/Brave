@@ -1,77 +1,134 @@
+from collections import deque
+
 import numpy as np
 import gymnasium as gym
 
 class BRSRewardWrapper(gym.Wrapper):
-    def __init__(self, env, gamma: float = 0.99, beta_min: float = 1.01):
+    def __init__(self, env, gamma: float = 0.95, beta_min: float = 1.1):
         super().__init__(env)
         self.gamma = gamma
         self.beta_min = beta_min
-        self.goal_pos = self.env.unwrapped.goal_position  # MountainCar 自带
+        self.goal_pos = self.env.unwrapped.goal_position
         # 这些变量按 episode / 全局维护
-        self.C0 = None           # 当前 episode 的初始 cost
+        self.C0 = None          # 当前 episode 的初始 cost
         self.C_Last = None       # c_{t-1}
-        self.C_star = np.inf     # 历史最小 cost（全局）
+        self.C_min = None     # 历史最小 cost（全局）
         self.R_t = 0.0           # 当前 episode RDCR
-        self.R_max = -np.inf     # 历史最大 RDCR
+        self.R_max = 0.0     # 历史最大 RDCR
+        self.sw = SlideWindow(50)
 
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
-        pos = self._get_position()
-        self.C0 = self._cost(pos)
-        self.C_star = np.inf
+        pos,vel = self._get_state()
+        self.C0 = self._cost(pos,vel)
+        self.sw.next(self.C0)
+        self.C_min = self.C0
+        self.C_Last = self.C0
 
         self.R_t = 0.0
-        self.R_max = -np.inf
+        self.R_max = 0.0
 
         return obs, info
+
+    #return ln(1+|x|) with sign of x
+    def signed_log(self,x):
+        return np.sign(x) * np.log1p(abs(x))
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         info["reward"] = reward
-        # 原始 MountainCar 的 reward 是 -1 每步；我们这里不用它，改用 cost-aware r_t
-        pos = self._get_position()
-        C_t = self._cost(pos)
-        delta_C_t0 = (C_t - self.C0) / (self.C0 + 1e-8)
-        # 这里没有 C_{t-1}，为了简单，用单变量版本：只看相对 C_t0
-        if delta_C_t0 >= 0:
-            r_t = (1 - delta_C_t0) ** 2 - 1
-        else:
-            r_t = -((1 + delta_C_t0) ** 2 - 1)
-
-        # 先用 r_t 更新 RDCR
-        self.R_t = self.gamma * self.R_t + r_t
+        pos,vel= self._get_state()
+        C_t = self._cost(pos,vel)
+        self.sw.next(C_t)
 
         # 判断是否产生新的 global minimum cost
-        brs_reward = r_t
-        if C_t < self.C_star:
+        if C_t < self.C_min:
             # 计算 bonus，保证 RDCR 超过历史最大
-            beta = self.beta_min#max(self.beta_min, (self.C_star - C_t) / (self.C_star + 1e-8))
-            bonus = beta * (self.R_max - self.gamma * self.R_t)
-            brs_reward = bonus
-            if brs_reward >10:
-                brs_reward =10.0
+            bonus =  self.beta_min * (self.R_max - self.gamma * self.R_t)+0.01
+            bonus = self.signed_log(bonus)
 
-            # 更新 C* 与 R_max, R_t
-            self.C_star = C_t
-            self.R_t = self.gamma * self.R_t + bonus
-            self.R_max = max(self.R_max, self.R_t)
-            # 用 BRS 后的 reward 替代原 reward
-            reward = float(max(brs_reward,reward,1e-5))  # 保证 reward 不小于原始 reward
+
+            self.C_min = C_t
+            reward = bonus
+        else:
+            reward = self.reward_function()
+
+        self.C_Last = C_t
+        self.R_t = self.gamma * self.R_t + reward
+        self.R_max = max(self.R_max, self.R_t)
+
         info["brs_reward"] = reward
         info["cost"] = C_t
-        info["C_star"] = self.C_star
+        info["C_min"] = self.C_min
         info["RDCR"] = self.R_t
         info["R_max"] = self.R_max
 
         return obs, reward, terminated, truncated, info
 
-    def _get_position(self):
-        # MountainCar obs = [position, velocity]
-        obs = self.env.unwrapped.state
-        pos = obs[0]
-        return pos
+    def reward_function(self):
+        # 原始 MountainCar 的 reward 是 -1 每步；我们这里不用它，改用 cost-aware r_t
+        pos,vel = self._get_state()
+        C_t = self._cost(pos,vel)
+        delta_0 = (C_t - self.C0) / self.sw.average
+        delta_last = (C_t - self.C_Last) / self.sw.average
 
-    def _cost(self, position):
-        # 越接近 goal cost 越小，用距离作为 cost
-        return abs(self.goal_pos - position)
+        if delta_last < 0:
+            # agent 在上一步减少了 cost
+            reward = ((1 - delta_last) ** 2 - 1) * (1+abs(delta_0)) + 0.01
+        elif delta_last > 0:
+            # agent 在上一步增加了 cost
+            reward = -((1 + delta_last) ** 2 - 1) * (1+abs(delta_0))*1.2 -0.01
+        else:
+            reward = -0.001
+
+        return reward
+
+    def _get_state(self):
+        # MountainCar obs = [position, velocity]
+        pos, vel = self.env.unwrapped.state
+        return pos, vel
+
+    # def _cost(self, position):
+    #     # 越接近 goal cost 越小，用距离作为 cost
+    #     return abs(self.goal_pos - position)
+
+    def _cost(self, position, velocity=None):
+        if velocity is None:
+            velocity = self.env.unwrapped.state[1]
+
+        # mass = 1.0
+        # gravity = 1.0
+        # kinetic_energy = 0.5 * mass * (velocity ** 2)
+        #
+        # height = np.sin(3.0 * position)
+        # potential_energy = gravity * (height + 1.0)
+        cost = abs(self.goal_pos - position) - 20 * abs(velocity)
+        #cost =  - 10 * abs(velocity)
+
+        return cost
+
+class SlideWindow:
+    def __init__(self, size):
+        self.size = size
+        self.queue = deque()
+        self.total = 0.0
+        self.avg = 0.0
+
+    def next(self, val):
+        if len(self.queue) == self.size:
+            self.total -= self.queue.popleft()
+        self.queue.append(val)
+        self.total += val
+        return self.average
+
+    def reset(self):
+        self.queue.clear()
+        self.total = 0.0
+
+    @property
+    def average(self):
+        if self.queue:
+            return self.total / len(self.queue)
+        else:
+            return 0
