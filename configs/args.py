@@ -25,9 +25,9 @@ class BaseArgs:
     capture_video: bool = False
     env_id: str = "UnknownEnv"
     learning_rate: float = 1e-4
-    num_envs: int = 1
-    num_steps: int = 128
-    anneal_lr: bool = False
+    num_envs: int = 10
+    num_steps: int = 1024
+    anneal_lr: bool = True
     gamma: float = 0.99
     gae_lambda: float = 0.95
     num_minibatches: int = 4
@@ -35,13 +35,13 @@ class BaseArgs:
     norm_adv: bool = True
     clip_coef: float = 0.1
     clip_vloss: bool = True
-    ent_coef: float = 0.01
+    ent_coef: float = 0.05
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     target_kl: Optional[float] = None
 
-    batch_size: int = field(init=False, default=256)
-    minibatch_size: int = field(init=False, default=32)
+    batch_size: int = field(init=False, default=10240)
+    minibatch_size: int = field(init=False, default=128)
     num_iterations: int = field(init=False, default=0)
 
     root_path:Path = Path(get_root_path())
@@ -67,8 +67,8 @@ class PpoAtariArgs(BaseArgs):
     swanlab_workspace = 'Eliment-li'
     swanlab_group = 'PPOAtari'
     track: bool = True
-    enable_brave: bool = True
-    total_timesteps: int = 10*K
+    enable_brave: bool = False
+    total_timesteps: int = 10*M
 
     def finalize(self):
         super().finalize()
