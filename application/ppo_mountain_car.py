@@ -30,10 +30,10 @@ args.finalize()
 def make_env(env_id, idx, capture_video, run_name, gamma):
     def thunk():
         if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
+            env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=20000)
             env = gym.wrappers.RecordVideo(env, Path(get_root_path()) / "results" / "videos"/  run_name)
         else:
-            env = gym.make(env_id)
+            env = gym.make(env_id, max_episode_steps=20000)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         if args.enable_brave:
             env = BRSRewardWrapper(env, gamma=gamma)
@@ -177,24 +177,32 @@ def train(args, envs, run_name):
             logprobs[step] = logprob
 
             next_obs_np, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
+            ep_info = get_info_val(infos, "episode")
+            if ep_info is not None and "r" in ep_info:
+                swanlab.log(data={
+                    "charts/episodic_return": ep_info["r"],
+                    "charts/episodic_length": ep_info["l"],
+                }, step=global_step)
+
             env_idx = 0
-            brs_val = get_info_val(infos, "brs_reward", env_idx)
-            C_min = get_info_val(infos, "C_min", env_idx)
-            cost_val = get_info_val(infos, "cost", env_idx)
-            rdcr_val = get_info_val(infos, "RDCR", env_idx)
-            ori_reward_val = get_info_val(infos, "reward", env_idx)
-            if global_step <50000:
-                if args.track:
-                    swanlab.log(
-                        data={
-                            "debug/brs_reward": brs_val,
-                            "debug/cost": cost_val,
-                            "debug/rdcr": rdcr_val,
-                            "debug/ori_reward": ori_reward_val,
-                            "debug/C_min": C_min,
-                        },
-                        step=global_step
-                    )
+            if args.enable_brave:
+                brs_val = get_info_val(infos, "brs_reward", env_idx)
+                C_min = get_info_val(infos, "C_min", env_idx)
+                cost_val = get_info_val(infos, "cost", env_idx)
+                rdcr_val = get_info_val(infos, "RDCR", env_idx)
+                ori_reward_val = get_info_val(infos, "reward", env_idx)
+                if global_step <50000:
+                    if args.track:
+                        swanlab.log(
+                            data={
+                                "debug/brs_reward": brs_val,
+                                "debug/cost": cost_val,
+                                "debug/rdcr": rdcr_val,
+                                "debug/ori_reward": ori_reward_val,
+                                "debug/C_min": C_min,
+                            },
+                            step=global_step
+                        )
             # brs_reward.append(float(brs_val))
             # cost.append(float(cost_val))
             # RDCR.append(float(rdcr_val))
@@ -313,21 +321,6 @@ def train(args, envs, run_name):
                 },
                 step=global_step
             )
-    plot_lines(
-        [
-            brs_reward,
-            ori_reward,
-            cost,
-            RDCR
-        ],
-        [
-            "BRS Reward",
-            "Original Reward",
-            "Cost",
-            "RDCR"
-        ]
-    )
-
 
 def main():
     # 覆盖为 MountainCar 的设置（也可以在 args 里配置）
