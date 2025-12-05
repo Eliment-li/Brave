@@ -16,6 +16,8 @@ class BRSRewardWrapper(gym.Wrapper):
         self.R_t = 0.0           # 当前 episode RDCR
         self.R_max = 0.0     # 历史最大 RDCR
         self.sw = SlideWindow(50)
+        self.num_steps = 0
+        self.min_num_steps=20000
 
 
     def reset(self, **kwargs):
@@ -28,6 +30,8 @@ class BRSRewardWrapper(gym.Wrapper):
 
         self.R_t = 0.0
         self.R_max = 0.0
+
+
 
         return obs, info
 
@@ -65,11 +69,13 @@ class BRSRewardWrapper(gym.Wrapper):
         # info["R_max"] = self.R_max
         self.num_steps+=1
         if terminated or truncated:
-            if self.min_num_steps<self.num_steps:
+            if self.min_num_steps>self.num_steps:
                 reward=2
                 self.min_num_steps = self.num_steps
                 print(f'self.min_num_steps ={self.min_num_steps}')
         return obs, reward, terminated, truncated, info
+
+
 
     def reward_function(self):
         # 原始 MountainCar 的 reward 是 -1 每步；我们这里不用它，改用 cost-aware r_t
