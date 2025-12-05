@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="ab3193a5-af03-4e64-951a-635f1e626028" name="a100">
+        <fileTransfer rootFolder="/home/lit/code" accessType="SFTP" host="85d8a6d1d2460298.natapp.cc" port="34654" sshConfigId="10816f1e-5f7b-41fa-a1ed-0e1432c4b843" sshConfig="lit@85d8a6d1d2460298.natapp.cc:34654 password">
+          <advancedOptions>
+            <advancedOptions controlEncoding="UTF-8" dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

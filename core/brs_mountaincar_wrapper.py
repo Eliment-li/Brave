@@ -37,33 +37,38 @@ class BRSRewardWrapper(gym.Wrapper):
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
-        info["reward"] = reward
-        pos,vel= self._get_state()
-        C_t = self._cost(pos,vel)
-        self.sw.next(C_t)
-
-        # 判断是否产生新的 global minimum cost
-        if C_t < self.C_min:
-            # 计算 bonus，保证 RDCR 超过历史最大
-            bonus =  self.beta_min * (self.R_max - self.gamma * self.R_t)+0.01
-            bonus = self.signed_log(bonus)
-
-
-            self.C_min = C_t
-            reward = bonus
-        else:
-            reward = self.reward_function()
-
-        self.C_Last = C_t
-        self.R_t = self.gamma * self.R_t + reward
-        self.R_max = max(self.R_max, self.R_t)
-
-        info["brs_reward"] = reward
-        info["cost"] = C_t
-        info["C_min"] = self.C_min
-        info["RDCR"] = self.R_t
-        info["R_max"] = self.R_max
-
+        # info["reward"] = reward
+        # pos,vel= self._get_state()
+        # C_t = self._cost(pos,vel)
+        # self.sw.next(C_t)
+        #
+        # # 判断是否产生新的 global minimum cost
+        # if C_t < self.C_min:
+        #     # 计算 bonus，保证 RDCR 超过历史最大
+        #     bonus =  self.beta_min * (self.R_max - self.gamma * self.R_t)+0.01
+        #     bonus = self.signed_log(bonus)
+        #
+        #
+        #     self.C_min = C_t
+        #     reward = bonus
+        # else:
+        #     reward = self.reward_function()
+        #
+        # self.C_Last = C_t
+        # self.R_t = self.gamma * self.R_t + reward
+        # self.R_max = max(self.R_max, self.R_t)
+        #
+        # info["brs_reward"] = reward
+        # info["cost"] = C_t
+        # info["C_min"] = self.C_min
+        # info["RDCR"] = self.R_t
+        # info["R_max"] = self.R_max
+        self.num_steps+=1
+        if terminated or truncated:
+            if self.min_num_steps<self.num_steps:
+                reward=2
+                self.min_num_steps = self.num_steps
+                print(f'self.min_num_steps ={self.min_num_steps}')
         return obs, reward, terminated, truncated, info
 
     def reward_function(self):
