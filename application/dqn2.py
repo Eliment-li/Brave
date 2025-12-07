@@ -1,4 +1,5 @@
 # Reference: https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf
+import traceback
 from pathlib import Path
 
 import torch
@@ -103,15 +104,15 @@ experiment_name = f"{args.gym_id}__{args.exp_name}__{args.seed}__{int(time.time(
 writer = SummaryWriter(f"runs/{experiment_name}")
 writer.add_text('hyperparameters', "|param|value|\n|-|-|\n%s" % (
     '\n'.join([f"|{key}|{value}|" for key, value in vars(args).items()])))
-if args.prod_mode:
-    swanlab.init(
-        project="Brave",
-        workspace="Eliment-li",
-        config=vars(args),
-        experiment_name=experiment_name,
-        settings=swanlab.Settings(backup=False),
-    )
-    writer = SummaryWriter(f"/tmp/{experiment_name}")
+swanlab.init(
+    project="Brave",
+    workspace="Eliment-li",
+    gruop ="dqn",
+    config=vars(args),
+    experiment_name=experiment_name,
+    settings=swanlab.Settings(backup=False)
+)
+    # writer = SummaryWriter(f"/tmp/{experiment_name}")
 
 # TRY NOT TO MODIFY: seeding
 device = torch.device('cuda' if torch.cuda.is_available() and args.cuda else 'cpu')
@@ -212,9 +213,9 @@ for global_step in range(args.total_timesteps):
         loss = loss_fn(td_target, old_val)
 
         if global_step % 100 == 0:
-            writer.add_scalar("losses/td_loss", loss, global_step)
-            if args.prod_mode:
-                swanlab.log({"losses/td_loss": loss.item()}, step=global_step)
+            # writer.add_scalar("losses/td_loss", loss, global_step)
+            # if args.prod_mode:
+            swanlab.log({"losses/td_loss": loss.item()}, step=global_step)
 
         # optimize the midel
         optimizer.zero_grad()
@@ -232,9 +233,10 @@ for global_step in range(args.total_timesteps):
     if done:
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         print(f"global_step={global_step}, episode_reward={episode_reward}")
-        writer.add_scalar("charts/episode_reward", episode_reward, global_step)
-        writer.add_scalar("charts/epsilon", epsilon, global_step)
-        if args.prod_mode:
+        # writer.add_scalar("charts/episode_reward", episode_reward, global_step)
+        # writer.add_scalar("charts/epsilon", epsilon, global_step)
+        # if args.prod_mode:
+        try:
             swanlab.log(
                 {
                     "charts/episode_reward": episode_reward,
@@ -242,6 +244,9 @@ for global_step in range(args.total_timesteps):
                 },
                 step=global_step,
             )
+        except Exception as e:
+            print("Unhandled exception in main:")
+            traceback.print_exc()
         obs, _ = env.reset()
         episode_reward = 0
 
