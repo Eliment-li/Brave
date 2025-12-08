@@ -186,7 +186,7 @@ print(device.__repr__())
 print(q_network)
 
 # TRY NOT TO MODIFY: start the game
-obs = env.reset()
+obs, _ = env.reset(seed=args.seed)
 episode_reward = 0
 for global_step in range(args.total_timesteps):
     # ALGO LOGIC: put action logic here
@@ -244,7 +244,7 @@ for global_step in range(args.total_timesteps):
                 }, step=global_step)
             except Exception:
                 traceback.print_exc()
-        obs = env.reset()
+        obs,_ = env.reset(seed=args.seed)
         episode_reward = 0
 
 env.close()
