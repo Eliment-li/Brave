@@ -3,14 +3,15 @@ from pathlib import Path
 
 from configs.base_args import get_root_path, BaseArgs
 
-
+M = 1000*1000
+K = 1000
 @dataclass
 class DqnArgs(BaseArgs):
     exp_name: str = "dqn_cleanrl"
     env_id: str = "MountainCar-v0"
     num_envs: int = 1
     track: bool = True
-    enable_brave: bool = True
+    enable_brave: bool = False
     total_timesteps: int = 2*M
     buffer_size: int = 10 * K
     gamma: float = 0.99
