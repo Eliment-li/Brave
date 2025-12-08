@@ -13,3 +13,4 @@ wandb
 swanlab
 scikit-learn
 arrow
+stable-baselines3[extra]
