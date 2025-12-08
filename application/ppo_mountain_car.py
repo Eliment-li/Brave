@@ -1,4 +1,5 @@
 # core/brs_mountaincar_wrapper.py
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -20,10 +21,15 @@ import torch.optim as optim
 import tyro
 from torch.distributions.categorical import Categorical
 
+from configs.ppo_args import PpoAtariArgs
 from core.brs_mountaincar_wrapper import BRSRewardWrapper
-from configs.args import PpoAtariArgs, get_root_path
+
 from utils.model.checkpoint import save_checkpoint
 from utils.plot.plot_lines import plot_lines
+from configs.base_args import get_root_path, BaseArgs
+from configs.private.private_args import PrivateArgs
+
+
 
 args = tyro.cli(PpoAtariArgs)
 args.finalize()

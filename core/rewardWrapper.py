@@ -4,7 +4,7 @@ from pathlib import Path
 import gymnasium as gym
 import numpy as np
 from typing import Callable, Tuple, Any
-from configs.args import PpoAtariArgs
+from configs.ppo_args import PpoAtariArgs
 import matplotlib.pyplot as plt
 args = PpoAtariArgs().finalize()
 class BreakoutRewardWrapper(gym.Wrapper):

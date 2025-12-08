@@ -2,6 +2,8 @@
 import random
 import time
 import traceback
+from dataclasses import dataclass
+
 import gymnasium as gym
 import numpy as np
 import swanlab
@@ -11,6 +13,8 @@ import torch.optim as optim
 import tyro
 from swanlab.swanlab_settings import settings
 from torch.distributions.categorical import Categorical
+
+from configs.ppo_args import PpoAtariArgs
 from core.rewardWrapper import BreakoutRewardWrapper
 from cleanrl_utils.atari_wrappers import (
     EpisodicLifeEnv,
@@ -18,8 +22,9 @@ from cleanrl_utils.atari_wrappers import (
     MaxAndSkipEnv,
     NoopResetEnv,
 )
-from configs.args import PpoAtariArgs
+
 from utils.model.checkpoint import save_checkpoint
+
 
 def make_env(env_id, idx, capture_video, run_name):
     def thunk():

@@ -21,7 +21,7 @@ import os
 
 import swanlab
 
-from configs.args import get_root_path
+from configs.base_args import get_root_path
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='DQN agent')

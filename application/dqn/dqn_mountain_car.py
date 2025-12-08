@@ -3,20 +3,16 @@ import time
 from dataclasses import asdict
 from pathlib import Path
 from collections import deque
-
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
 import gymnasium as gym
 from gymnasium.spaces import Box, Discrete
 from gymnasium.wrappers import RecordEpisodeStatistics, RecordVideo
-
 import swanlab
-
-from configs.args import DqnArgs, get_root_path
-
+from configs.base_args import get_root_path
+from configs.dqn_args import DqnArgs
 
 def one_hot(index, size):
     vec = np.zeros(size, dtype=np.float32)
@@ -209,6 +205,6 @@ def main():
 
 
 if __name__ == "__main__":
-    for i in range(2):
+    for i in range(1):
         main()
     time.sleep(60)
