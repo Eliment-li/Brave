@@ -17,7 +17,7 @@ class BRSRewardWrapper(gym.Wrapper):
         self.R_max = 0.0     # 历史最大 RDCR
         self.sw = SlideWindow(50)
         self.num_steps = 0
-        self.min_num_steps=20000
+        self.min_num_steps=200
 
 
     def reset(self, **kwargs):
@@ -27,11 +27,10 @@ class BRSRewardWrapper(gym.Wrapper):
         self.sw.next(self.C0)
         self.C_min = self.C0
         self.C_Last = self.C0
-
         self.R_t = 0.0
         self.R_max = 0.0
-
-
+        self.num_steps = 0
+        self.min_num_steps = 200
 
         return obs, info
 
@@ -69,8 +68,8 @@ class BRSRewardWrapper(gym.Wrapper):
         # info["R_max"] = self.R_max
         self.num_steps+=1
         if terminated or truncated:
-            if self.min_num_steps>self.num_steps:
-                reward=2
+            if self.num_steps < self.min_num_steps:
+                reward=10
                 self.min_num_steps = self.num_steps
                 print(f'self.min_num_steps ={self.min_num_steps}')
         return obs, reward, terminated, truncated, info

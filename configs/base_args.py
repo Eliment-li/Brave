@@ -54,7 +54,6 @@ class BaseArgs:
         self.batch_size = int(self.num_envs * self.num_steps)
         self.minibatch_size = int(self.batch_size // self.num_minibatches)
         self.num_iterations = self.total_timesteps // self.batch_size
-        self.experiment_name = get_animals_name() +'_'+ arrow.now().format('MMDD_HHmm')
 
         return self
 

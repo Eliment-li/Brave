@@ -1,6 +1,8 @@
 from dataclasses import field, dataclass
 from pathlib import Path
 
+import arrow
+
 from configs.base_args import get_root_path, BaseArgs
 
 M = 1000*1000
@@ -11,7 +13,7 @@ class DqnArgs(BaseArgs):
     env_id: str = "MountainCar-v0"
     num_envs: int = 1
     track: bool = True
-    enable_brave: bool = False
+    enable_brave: bool = True
     total_timesteps: int = 2*M
     buffer_size: int = 10 * K
     gamma: float = 0.99
@@ -34,6 +36,7 @@ class DqnArgs(BaseArgs):
         self.minibatch_size = self.batch_size
         self.num_iterations = self.total_timesteps // max(1, self.batch_size)
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        self.experiment_name = self.env_id+'_' + arrow.now().format('MMDD_HHmm')
         if self.enable_brave:
             self.experiment_name += '_brave'
         return self

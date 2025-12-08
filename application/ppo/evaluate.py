@@ -1,11 +1,10 @@
 import gymnasium as gym
 import torch
-import torch.nn as nn
 import torch.optim as optim
 
 from configs.ppo_args import PpoAtariArgs
-from utils.model.checkpoint import load_checkpoint
-from application.ppo_mountain_car import Agent as TrainAgent, make_env
+from core.model.checkpoint import load_checkpoint
+from application.ppo.ppo_mountain_car import Agent as TrainAgent, make_env
 
 
 def make_eval_envs(env_id: str, run_name: str = "eval_dummy"):
@@ -76,9 +75,9 @@ def evaluate_model(
 
 
 if __name__ == "__main__":
-    ckpt_path = r"D:\project\Brave\results\checkpoints\MountainCar-v0__ppo_atari__3851__1764768735\checkpoint_iter78_step9856.pt"
+    ckpt_path = r"/home/lit/code/brave/results/checkpoints/Pig_1208_0953_brave_step1487147.pt"
     evaluate_model(
         ckpt_path=ckpt_path,
         episodes=6,
-        seed=3851,
+        seed=1873,
     )
