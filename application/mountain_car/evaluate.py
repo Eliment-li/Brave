@@ -5,7 +5,7 @@ import gymnasium as gym
 from gymnasium.wrappers import RecordEpisodeStatistics, RecordVideo
 from pathlib import Path
 
-from application.dqn.dqn_mountain_car import QNetwork, ProcessObsInputEnv
+from application.mountain_car.dqn_mountain_car import QNetwork, ProcessObsInputEnv
 from configs.dqn_args import DqnArgs
 
 
