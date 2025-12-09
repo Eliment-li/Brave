@@ -130,7 +130,7 @@ this is for evn to calc rescent dist
     # 测试重置功能
     print("\n=== 测试重置功能 ===")
     ma.reset()
-    print(f"重置后当前平均值: {ma.current_avg:.2f}")  # 期望: 0.00
+    print(f"重置后当前平均值: {ma.average:.2f}")  # 期望: 0.00
     print(f"添加5，平均值: {ma.next(5):.2f}")  # 期望: 5.00
     print(f"添加10，平均值: {ma.next(10):.2f}")  # 期望: 7.50
 
@@ -166,14 +166,14 @@ class SlideWindow:
             self.total -= self.queue.popleft()
         self.queue.append(val)
         self.total += val
-        return self.current_avg
+        return self.average
 
     def reset(self):
         self.queue.clear()
         self.total = 0.0
 
     @property
-    def current_avg(self):
+    def average(self):
         if self.queue:
             return self.total / len(self.queue)
         else:
