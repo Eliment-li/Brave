@@ -71,7 +71,7 @@ class BRSRewardWrapper(gym.Wrapper):
             if self.num_steps < self.min_num_steps:
                 reward=10
                 self.min_num_steps = self.num_steps
-                print(f'self.min_num_steps ={self.min_num_steps}')
+                #print(f'self.min_num_steps ={self.min_num_steps}')
         return obs, reward, terminated, truncated, info
 
 
