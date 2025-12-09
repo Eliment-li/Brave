@@ -1,3 +1,4 @@
+import argparse
 import random
 import time
 from dataclasses import asdict
@@ -205,6 +206,10 @@ def main():
 
 
 if __name__ == "__main__":
-    for i in range(1):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--repeat", type=int, default=1, help="repeat train_and_evaluate")
+    args = parser.parse_args()
+    for _ in range(args.repeat):
         main()
-    time.sleep(60)
+        #make sure all resource closed
+        time.sleep(60)
