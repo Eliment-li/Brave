@@ -1,7 +1,7 @@
-from collections import deque
 
 import numpy as np
 import gymnasium as gym
+from utils.calc_util import SlideWindow
 
 class BRSRewardWrapper(gym.Wrapper):
     def __init__(self, env, gamma: float = 0.95, beta_min: float = 1.1):
@@ -117,28 +117,3 @@ class BRSRewardWrapper(gym.Wrapper):
         #cost =  - 10 * abs(velocity)
 
         return cost
-
-class SlideWindow:
-    def __init__(self, size):
-        self.size = size
-        self.queue = deque()
-        self.total = 0.0
-        self.avg = 0.0
-
-    def next(self, val):
-        if len(self.queue) == self.size:
-            self.total -= self.queue.popleft()
-        self.queue.append(val)
-        self.total += val
-        return self.average
-
-    def reset(self):
-        self.queue.clear()
-        self.total = 0.0
-
-    @property
-    def average(self):
-        if self.queue:
-            return self.total / len(self.queue)
-        else:
-            return 0
