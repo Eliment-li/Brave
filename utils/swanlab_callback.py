@@ -104,10 +104,7 @@ class SwanLabCallback(BaseCallback):
         self._mode = self._swanlab_init.get("mode")
 
     def _init_callback(self) -> None:
-        # 现在可以直接访问 self._kwargs
         kwargs_from_init = self._kwargs
-        # 你可以在这里使用 kwargs_from_init
-
         args = {"algo": type(self.model).__name__}
         for key in self.model.__dict__:
             if type(self.model.__dict__[key]) in [float, int, str]:
