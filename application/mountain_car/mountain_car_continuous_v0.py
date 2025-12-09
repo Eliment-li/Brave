@@ -6,6 +6,7 @@ from pathlib import Path
 
 import gymnasium as gym
 import arrow
+import numpy as np
 from gymnasium.wrappers import RecordVideo
 import torch
 from stable_baselines3 import PPO
@@ -14,10 +15,9 @@ from stable_baselines3.common.evaluation import evaluate_policy
 
 from configs.base_args import get_root_path
 import swanlab
-from utils.swanlab_callback import SwanLabCallback
 
-# 新增：导入自定义 wrapper
-from core.brs_mountaincar_wrapper import BRSRewardWrapper
+from utils.calc_util import SlideWindow
+from utils.swanlab_callback import SwanLabCallback
 
 #batch_size 必须整除 n_steps × n_envs（对 PPO/A2C 等），否则会报错或被内部调整。
 @dataclass
@@ -27,6 +27,7 @@ class Args:
     seed: int = -1
     track: bool = True
     enable_brave = True
+    brs_versoin = 1
     swanlab_project: str = "Brave"
     swanlab_workspace: str = "Eliment-li"
     swanlab_group: str = "ppo_mountain_car_sb"
@@ -49,6 +50,30 @@ class Args:
 
     #make dir if model_dir or video_dir not exist
 
+class BRSRewardWrapperV1(gym.Wrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        self.cost = 0
+
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        self.cost = 0
+        self.min_cost = 0
+
+        return obs, info
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        self.cost+=(0.1* action**2)
+        if terminated or truncated:
+            if self.min_cost==0:
+                self.min_cost = self.cost
+            elif self.cost < self.min_cost:
+                reward=10
+                self.min_cost = self.cost
+                print(f'self.min_cost ={self.min_cost}')
+        return obs, reward, terminated, truncated, info
+
 def save_model(model: PPO, path: str) -> None:
     model.save(path)
 
@@ -64,7 +89,7 @@ def train_and_evaluate():
     def make_env():
         env = gym.make(args.env_id)
         if args.enable_brave:
-            env = BRSRewardWrapper(env)
+            env = BRSRewardWrapperV1(env)
         return env
 
     env = make_vec_env(make_env, n_envs=1, seed=args.seed)
@@ -95,7 +120,7 @@ def train_and_evaluate():
 
     def make_eval_env():
         env_ = gym.make(args.env_id, render_mode="rgb_array")
-        env_ = BRSRewardWrapper(env_)  # 包裹自定义 wrapper
+        env_ = BRSRewardWrapperV1(env_)
         env_ = RecordVideo(
             env_,
             video_folder=str(args.video_dir),
