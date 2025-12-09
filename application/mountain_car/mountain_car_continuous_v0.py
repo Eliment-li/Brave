@@ -195,6 +195,8 @@ class BRSRewardWrapperV2(gym.Wrapper):
         #
         # height = np.sin(3.0 * position)
         # potential_energy = gravity * (height + 1.0)
+        if velocity == 0:
+            velocity = 0.01  # prevent division by zero
         cost = abs(self.goal_pos - position) /( 10 * abs(velocity))
         #cost =  - 10 * abs(velocity)
 
