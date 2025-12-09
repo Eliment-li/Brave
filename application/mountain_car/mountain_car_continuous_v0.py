@@ -1,7 +1,6 @@
 #depend on stablebaselines3, gymnasium
-import argparse
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from pathlib import Path
 
 import gymnasium as gym
@@ -18,12 +17,16 @@ import swanlab
 
 from utils.calc_util import SlideWindow
 from utils.swanlab_callback import SwanLabCallback
-
+from utils.plot.plot_lines import plot_lines
+import tyro
+import os
+os.environ["SDL_VIDEODRIVER"] = "dummy"
 #batch_size 必须整除 n_steps × n_envs（对 PPO/A2C 等），否则会报错或被内部调整。
 @dataclass
 class Args:
     env_id: str = "MountainCarContinuous-v0"
-    total_timesteps: int = 500_000
+    total_timesteps: int = 3000
+    repeat: int = 1
     seed: int = -1
     track: bool = True
     enable_brave = True
@@ -33,9 +36,10 @@ class Args:
     swanlab_group: str = "ppo_mountain_car_sb"
     root_path: str = get_root_path()
     video_freq: int = 1  #
-    n_eval_episodes: int = 5
+    n_eval_episodes: int = 2
     model_dir: str = get_root_path()+"/results/checkpoints/MountainCarContinuous_v0"
     video_dir: str = get_root_path()+"/results/videos/MountainCarContinuous_v0"
+    tags: list[str] = field(default_factory=list)
     def finalize(self):
         self.experiment_name = self.env_id + '_' + arrow.now().format('MMDD_HHmm')
         if self.enable_brave:
@@ -44,6 +48,11 @@ class Args:
         if self.seed == -1:
             self.seed = torch.randint(0, 10000, (1,)).item()
         print(f"Using seed: {self.seed}")
+        if self.tags:
+            parsed_tags = []
+            for tag in self.tags:
+                parsed_tags.extend([t.strip() for t in tag.split(',') if t.strip()])
+            self.tags = parsed_tags
         # make dir if model_dir or video_dir not exist
         Path(self.model_dir).mkdir(parents=True, exist_ok=True)
         Path(self.video_dir).mkdir(parents=True, exist_ok=True)
@@ -54,7 +63,7 @@ class BRSRewardWrapperV1(gym.Wrapper):
     def __init__(self, env):
         super().__init__(env)
         self.cost = 0
-
+        self.min_cost = 0
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
         self.cost = 0
@@ -68,11 +77,155 @@ class BRSRewardWrapperV1(gym.Wrapper):
         if terminated or truncated:
             if self.min_cost==0:
                 self.min_cost = self.cost
+                print(f'self.min_cost ={self.min_cost}')
             elif self.cost < self.min_cost:
-                reward=10
+                reward=20
                 self.min_cost = self.cost
                 print(f'self.min_cost ={self.min_cost}')
         return obs, reward, terminated, truncated, info
+
+class BRSRewardWrapperV2(gym.Wrapper):
+    def __init__(self, env, gamma: float = 0.95, beta_min: float = 1.1, evaluate: bool = False, plot_save_dir = None):
+        super().__init__(env)
+        self.gamma = gamma
+        self.beta_min = beta_min
+        self.goal_pos = self.env.unwrapped.goal_position
+        # 这些变量按 episode / 全局维护
+        self.C0 = None          # 当前 episode 的初始 cost
+        self.C_Last = None       # c_{t-1}
+        self.C_min = None     # 历史最小 cost（全局）
+        self.R_t = 0.0           # 当前 episode RDCR
+        self.R_max = 0.0     # 历史最大 RDCR
+        self.sw = SlideWindow(50)
+        self.num_steps = 0
+        self.evaluate = evaluate
+        self.plot_save_dir = Path(plot_save_dir) if plot_save_dir is not None else None
+        if self.plot_save_dir:
+            self.plot_save_dir.mkdir(parents=True, exist_ok=True)
+        self.eval_episode_idx = 1
+        self._reset_eval_buffers()
+
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        pos,vel = self._get_state()
+        self.C0 = self._cost(pos,vel)
+        self.sw.next(self.C0)
+        self.C_min = self.C0
+        self.C_Last = self.C0
+        self.R_t = 0.0
+        self.R_max = 0.0
+        self.num_steps = 0
+        if self.evaluate:
+            self._reset_eval_buffers()
+        return obs, info
+
+    #return ln(1+|x|) with sign of x
+    def signed_log(self,x):
+        return np.sign(x) * np.log1p(abs(x))
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        info["stander_reward"] = reward
+        pos,vel= self._get_state()
+        C_t = self._cost(pos,vel)
+        self.sw.next(C_t)
+        if self.evaluate:
+            self.eval_costs.append(C_t)
+
+        # 判断是否产生新的 global minimum cost
+        if C_t < self.C_min:
+            # 计算 bonus，保证 RDCR 超过历史最大
+            bonus =  self.beta_min * (self.R_max - self.gamma * self.R_t)+0.01
+            bonus = self.signed_log(bonus)
+            self.C_min = C_t
+            reward = bonus
+        else:
+            reward = self.reward_function()
+
+        self.C_Last = C_t
+        self.R_t = self.gamma * self.R_t + reward
+        self.R_max = max(self.R_max, self.R_t)
+
+        if self.evaluate:
+            self.eval_rewards.append(reward)
+            self.eval_rmax.append(self.R_max)
+
+        info["brs_reward"] = reward
+        info["cost"] = C_t
+        info["C_min"] = self.C_min
+        info["RDCR"] = self.R_t
+        info["R_max"] = self.R_max
+        self.num_steps+=1
+        if self.evaluate and (terminated or truncated):
+            self._plot_eval_episode()
+        return obs, reward, terminated, truncated, info
+
+    def reward_function(self):
+        # 原始 MountainCar 的 reward 是 -1 每步；我们这里不用它，改用 cost-aware r_t
+        pos,vel = self._get_state()
+        C_t = self._cost(pos,vel)
+        delta_0 = (C_t - self.C0) / self.sw.average
+        delta_last = (C_t - self.C_Last) / self.sw.average
+        if delta_last < 0:
+            # agent 在上一步减少了 cost
+            reward = ((1 - delta_last) ** 2 - 1) * (1+abs(delta_0)) + 0.01
+        elif delta_last > 0:
+            # agent 在上一步增加了 cost
+            reward = -((1 + delta_last) ** 2 - 1) * (1+abs(delta_0))*1.1 -0.01
+        else:
+            reward = -0.001
+
+        return reward
+
+    def _get_state(self):
+        # MountainCar obs = [position, velocity]
+        pos, vel = self.env.unwrapped.state
+        return pos, vel
+
+    def _cost(self, position, velocity=None):
+        return abs(self.goal_pos - position)
+
+    # def _cost(self, position, velocity=None):
+    #     if velocity is None:
+    #         velocity = self.env.unwrapped.state[1]
+    #
+    #     # mass = 1.0
+    #     # gravity = 1.0
+    #     # kinetic_energy = 0.5 * mass * (velocity ** 2)
+    #     #
+    #     # height = np.sin(3.0 * position)
+    #     # potential_energy = gravity * (height + 1.0)
+    #     cost = abs(self.goal_pos - position) - 20 * abs(velocity)
+    #     #cost =  - 10 * abs(velocity)
+    #
+    #     return cost
+
+    def _reset_eval_buffers(self):
+        self.eval_rewards = []
+        self.eval_costs = []
+        self.eval_rmax = []
+
+    def _plot_eval_episode(self):
+        if not self.eval_rewards:
+            return
+        save_path = None
+        if self.plot_save_dir:
+            save_path = self.plot_save_dir / f"episode_{self.eval_episode_idx:04d}.png"
+        plot_lines(
+            [self.eval_rewards, self.eval_costs, self.eval_rmax],
+            names=["reward", "C_t", "R_max"],
+            xlabel="Step",
+            ylabel="Value",
+            title=f"Eval Episode {self.eval_episode_idx}",
+            show=False,
+            save_path=str(save_path) if save_path else None
+        )
+        print(f'Saved eval episode plot to {save_path}')
+        # log to swanlab
+        image = swanlab.Image(str(save_path),file_type='png', caption=f"Eval Episode {self.eval_episode_idx}")
+        swanlab.log({f"Eval Episode {self.eval_episode_idx}": image})
+        self.eval_episode_idx += 1
+        self._reset_eval_buffers()
 
 def save_model(model: PPO, path: str) -> None:
     model.save(path)
@@ -82,14 +235,11 @@ def load_model(path: str, env) -> PPO:
     return model
 
 def train_and_evaluate():
-    args = Args()
-    args.finalize()
     args_dict = asdict(args)
-
     def make_env():
         env = gym.make(args.env_id)
         if args.enable_brave:
-            env = BRSRewardWrapperV1(env)
+            env = BRSRewardWrapperV2(env)
         return env
 
     env = make_vec_env(make_env, n_envs=1, seed=args.seed)
@@ -119,8 +269,9 @@ def train_and_evaluate():
 
 
     def make_eval_env():
+        plot_dir = Path(args.video_dir) / "plots"
         env_ = gym.make(args.env_id, render_mode="rgb_array")
-        env_ = BRSRewardWrapperV1(env_)
+        env_ = BRSRewardWrapperV2(env_, evaluate = True, plot_save_dir = plot_dir)
         env_ = RecordVideo(
             env_,
             video_folder=str(args.video_dir),
@@ -147,10 +298,13 @@ def train_and_evaluate():
     print(f"Model saved to: {str(model_path)}")
     print(f"Videos saved to: {str(args.video_dir)}")
 
-
+'''
+  "python -m application.mountain_car.mountain_car_continuous_v0 "
+    "--repeat 3 --tags brave,debug --total_timesteps 10000"
+'''
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--repeat", type=int, default=1, help="repeat train_and_evaluate")
-    args = parser.parse_args()
+    args = tyro.cli(Args)
+    args.finalize()
     for _ in range(args.repeat):
         train_and_evaluate()
+        time.sleep(10)
