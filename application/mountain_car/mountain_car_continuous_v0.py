@@ -185,20 +185,20 @@ class BRSRewardWrapperV2(gym.Wrapper):
     def _cost(self, position, velocity=None):
         return abs(self.goal_pos - position)
 
-    # def _cost(self, position, velocity=None):
-    #     if velocity is None:
-    #         velocity = self.env.unwrapped.state[1]
-    #
-    #     # mass = 1.0
-    #     # gravity = 1.0
-    #     # kinetic_energy = 0.5 * mass * (velocity ** 2)
-    #     #
-    #     # height = np.sin(3.0 * position)
-    #     # potential_energy = gravity * (height + 1.0)
-    #     cost = abs(self.goal_pos - position) - 20 * abs(velocity)
-    #     #cost =  - 10 * abs(velocity)
-    #
-    #     return cost
+    def _cost(self, position, velocity=None):
+        if velocity is None:
+            velocity = self.env.unwrapped.state[1]
+
+        # mass = 1.0
+        # gravity = 1.0
+        # kinetic_energy = 0.5 * mass * (velocity ** 2)
+        #
+        # height = np.sin(3.0 * position)
+        # potential_energy = gravity * (height + 1.0)
+        cost = abs(self.goal_pos - position) /( 10 * abs(velocity))
+        #cost =  - 10 * abs(velocity)
+
+        return cost
 
     def _reset_eval_buffers(self):
         self.eval_rewards = []
