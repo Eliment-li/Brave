@@ -6,7 +6,7 @@ from collections import defaultdict
 from typing import List, Optional, Sequence, Tuple, Union
 
 # 全局风格设置（参考用户代码）
-plt.rcParams["font.family"] = "Arial"
+# plt.rcParams["font.family"] = "Arial"
 plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams['ps.fonttype'] = 42
 mpl.rcParams['font.size'] = 24
@@ -30,6 +30,7 @@ def plot_lines(
     grid_y_step: Optional[float] = None,
     legend_loc: str = 'upper right',
     save_path: Optional[str] = None,
+    show = False
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     绘制二维曲线。
@@ -136,7 +137,9 @@ def plot_lines(
         pass
 
     fig.tight_layout()
-    plt.show()
+
+    if show:
+        plt.show()
     if save_path:
         fig.savefig(save_path, dpi=dpi, bbox_inches='tight')
 
