@@ -30,8 +30,8 @@ class Args:
     repeat: int = 1
     seed: int = -1
     track: bool = True
-    enable_brave = True
-    brs_versoin = 1
+    enable_brave:bool = False
+    normalize: bool = True
     swanlab_project: str = "Brave"
     swanlab_workspace: str = "Eliment-li"
     swanlab_group: str = "ppo_mountain_car_sb"
@@ -260,8 +260,8 @@ def train_and_evaluate():
     # 使用超参数
     hyperparams = dict(
         policy="MlpPolicy",
-        batch_size=256,
-        n_steps=8,
+        batch_size=args.n_steps,
+        n_steps=args.n_steps,
         gamma=0.9999,
         learning_rate=7.77e-5,
         ent_coef=0.00429,
@@ -279,7 +279,7 @@ def train_and_evaluate():
     # 创建环境
     env = make_vec_env(make_env, n_envs=1, seed=args.seed)
     # 是否归一化
-    if True:  # normalize: true
+    if args.normalize:  # normalize: true
         env = VecNormalize(env, norm_obs=True, norm_reward=True)
 
     # 创建PPO模型
@@ -287,7 +287,7 @@ def train_and_evaluate():
 
     # 训练
     if args.track:
-        model.learn(total_timesteps=20000,  # n_timesteps: 20000
+        model.learn(total_timesteps=args.total_timesteps,  # n_timesteps: 20000
                     callback=SwanLabCallback(
                         project=args.swanlab_project,
                         experiment_name=args.experiment_name,
@@ -299,7 +299,7 @@ def train_and_evaluate():
                     ),
         )
     else:
-        model.learn(total_timesteps=20000)
+        model.learn(total_timesteps=args.total_timesteps)
     # 保存模型
     model_path = Path(args.model_dir) / f"{args.experiment_name}_seed{args.seed}.zip"
     save_model(model, str(model_path))
@@ -342,6 +342,7 @@ def train_and_evaluate():
 if __name__ == "__main__":
     args = tyro.cli(Args)
     args.finalize()
-    for _ in range(args.repeat):
+    for i in range(args.repeat):
+        args.n_steps = 2**(i+3)  # ensure batch_size divides n_steps * n_envs
         train_and_evaluate()
-        time.sleep(10)
+        time.sleep(60)
