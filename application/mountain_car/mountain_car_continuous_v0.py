@@ -11,6 +11,7 @@ import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.vec_env import VecNormalize
 
 from configs.base_args import get_root_path
 import swanlab
@@ -104,7 +105,6 @@ class BRSRewardWrapperV2(gym.Wrapper):
             self.plot_save_dir.mkdir(parents=True, exist_ok=True)
         self.eval_episode_idx = 1
         self._reset_eval_buffers()
-        self.stander_episode_reward = 0  # 初始化 episode 累计 reward
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
@@ -116,7 +116,6 @@ class BRSRewardWrapperV2(gym.Wrapper):
         self.R_t = 0.0
         self.R_max = 0.0
         self.num_steps = 0
-        self.stander_episode_reward = 0  # 重置累计 reward
         if self.evaluate:
             self._reset_eval_buffers()
         return obs, info
@@ -128,7 +127,6 @@ class BRSRewardWrapperV2(gym.Wrapper):
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         info["stander_reward"] = reward
-        self.stander_episode_reward += reward  # 累计 stander_reward
         pos,vel= self._get_state()
         C_t = self._cost(pos,vel)
         self.sw.next(C_t)
@@ -249,14 +247,37 @@ def train_and_evaluate():
             env = BRSRewardWrapperV2(env)
         return env
 
+    # 使用超参数
+    hyperparams = dict(
+        policy="MlpPolicy",
+        batch_size=256,
+        n_steps=8,
+        gamma=0.9999,
+        learning_rate=7.77e-5,
+        ent_coef=0.00429,
+        clip_range=0.1,
+        n_epochs=10,
+        gae_lambda=0.9,
+        max_grad_norm=5,
+        vf_coef=0.19,
+        use_sde=True,
+        policy_kwargs=dict(log_std_init=-3.29, ortho_init=False),
+        verbose=1,
+        seed=args.seed,
+    )
+
+    # 创建环境
     env = make_vec_env(make_env, n_envs=1, seed=args.seed)
+    # 是否归一化
+    if True:  # normalize: true
+        env = VecNormalize(env, norm_obs=True, norm_reward=True)
 
-    # use PPO with default hyper-paras
-    model = PPO("MlpPolicy", env, verbose=1, seed=args.seed)
+    # 创建PPO模型
+    model = PPO(**hyperparams, env=env)
 
-    # train
+    # 训练
     if args.track:
-        model.learn(total_timesteps=args.total_timesteps,
+        model.learn(total_timesteps=20000,  # n_timesteps: 20000
                     callback=SwanLabCallback(
                         project=args.swanlab_project,
                         experiment_name=args.experiment_name,
@@ -268,9 +289,8 @@ def train_and_evaluate():
                     ),
         )
     else:
-        model.learn(total_timesteps=args.total_timesteps)
-    # save model
-
+        model.learn(total_timesteps=20000)
+    # 保存模型
     model_path = Path(args.model_dir) / f"{args.experiment_name}_seed{args.seed}.zip"
     save_model(model, str(model_path))
 
