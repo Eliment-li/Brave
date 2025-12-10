@@ -61,19 +61,22 @@ class Args:
     #make dir if model_dir or video_dir not exist
 
 class BRSRewardWrapperV1(gym.Wrapper):
-    def __init__(self, env):
+    def __init__(self, env,gamma: float = 0.99, beta_min: float = 1.1, evaluate: bool = False, plot_save_dir = None):
         super().__init__(env)
         self.cost = 0
         self.min_cost = 0
+        self.stander_episode_reward = 0
+
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
         self.cost = 0
         self.min_cost = 0
-
+        self.num_steps = 0
         return obs, info
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
+        self.stander_episode_reward +=reward
         self.cost+=(0.1* action**2)
         if terminated or truncated:
             if self.min_cost==0:
@@ -83,6 +86,10 @@ class BRSRewardWrapperV1(gym.Wrapper):
                 reward=20
                 self.min_cost = self.cost
                 print(f'self.min_cost ={self.min_cost}')
+        self.num_steps += 1
+        if terminated or truncated:
+            info["stander_episode_reward_mean"] = self.stander_episode_reward/self.num_steps  # 更新累计 reward 到 info
+            self.stander_episode_reward = 0
         return obs, reward, terminated, truncated, info
 
 class BRSRewardWrapperV2(gym.Wrapper):
@@ -105,6 +112,7 @@ class BRSRewardWrapperV2(gym.Wrapper):
             self.plot_save_dir.mkdir(parents=True, exist_ok=True)
         self.eval_episode_idx = 1
         self._reset_eval_buffers()
+        self.stander_episode_reward = 0
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
@@ -127,6 +135,7 @@ class BRSRewardWrapperV2(gym.Wrapper):
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         info["stander_reward"] = reward
+        self.stander_episode_reward+=reward
         pos,vel= self._get_state()
         C_t = self._cost(pos,vel)
         self.sw.next(C_t)
@@ -159,6 +168,7 @@ class BRSRewardWrapperV2(gym.Wrapper):
         self.num_steps+=1
         if terminated or truncated:
             info["stander_episode_reward_mean"] = self.stander_episode_reward/self.num_steps  # 更新累计 reward 到 info
+            self.stander_episode_reward = 0
         if self.evaluate and (terminated or truncated):
             self._plot_eval_episode()
         return obs, reward, terminated, truncated, info
@@ -244,7 +254,7 @@ def train_and_evaluate():
     def make_env():
         env = gym.make(args.env_id)
         if args.enable_brave:
-            env = BRSRewardWrapperV2(env)
+            env = BRSRewardWrapperV1(env)
         return env
 
     # 使用超参数
@@ -298,7 +308,7 @@ def train_and_evaluate():
     def make_eval_env():
         plot_dir = Path(args.video_dir) / "plots"
         env_ = gym.make(args.env_id, render_mode="rgb_array")
-        env_ = BRSRewardWrapperV2(env_, evaluate = True, plot_save_dir = plot_dir)
+        env_ = BRSRewardWrapperV1(env_, evaluate = True, plot_save_dir = plot_dir)
         env_ = RecordVideo(
             env_,
             video_folder=str(args.video_dir),
