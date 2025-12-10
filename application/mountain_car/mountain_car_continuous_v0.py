@@ -104,6 +104,7 @@ class BRSRewardWrapperV2(gym.Wrapper):
             self.plot_save_dir.mkdir(parents=True, exist_ok=True)
         self.eval_episode_idx = 1
         self._reset_eval_buffers()
+        self.stander_episode_reward = 0  # 初始化 episode 累计 reward
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
@@ -115,6 +116,7 @@ class BRSRewardWrapperV2(gym.Wrapper):
         self.R_t = 0.0
         self.R_max = 0.0
         self.num_steps = 0
+        self.stander_episode_reward = 0  # 重置累计 reward
         if self.evaluate:
             self._reset_eval_buffers()
         return obs, info
@@ -126,6 +128,7 @@ class BRSRewardWrapperV2(gym.Wrapper):
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         info["stander_reward"] = reward
+        self.stander_episode_reward += reward  # 累计 stander_reward
         pos,vel= self._get_state()
         C_t = self._cost(pos,vel)
         self.sw.next(C_t)
@@ -156,6 +159,8 @@ class BRSRewardWrapperV2(gym.Wrapper):
         info["RDCR"] = self.R_t
         info["R_max"] = self.R_max
         self.num_steps+=1
+        if terminated or truncated:
+            info["stander_episode_reward_mean"] = self.stander_episode_reward/self.num_steps  # 更新累计 reward 到 info
         if self.evaluate and (terminated or truncated):
             self._plot_eval_episode()
         return obs, reward, terminated, truncated, info

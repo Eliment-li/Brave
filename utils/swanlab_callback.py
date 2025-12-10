@@ -40,6 +40,7 @@ model.learn(
 swanlab.finish()
 ---------------------------------
 """
+import numbers
 
 import swanlab
 from typing import Optional, Dict, Any, Union, Tuple, List
@@ -147,4 +148,32 @@ class SwanLabCallback(BaseCallback):
             self._run.config.update(config)
 
     def _on_step(self) -> bool:
+        # 从 rollout 的 locals 拿到 infos（VecEnv: List[Dict]）
+        infos = self.locals.get("infos", None)
+        dones = self.locals.get("dones", None)
+
+        extra_keys =['stander_reward']
+
+        if dones[0]:
+            extra_keys.append('stander_episode_reward_mean')
+
+        if infos:
+            # SB3 的时间步
+            step = int(self.num_timesteps)
+            # 合并/过滤每个 env 的 info
+            aggregated: Dict[str, float] = {}
+            for info in infos:
+                if not isinstance(info, dict):
+                    continue
+                for k in extra_keys:  # 添加 stander_episode_reward
+                    v = info.get(k, None)
+                    if isinstance(v, numbers.Number):
+                        # 多环境简单做平均
+                        aggregated[k] = aggregated.get(k, 0.0) + float(v)
+            if aggregated:
+                n_envs = len(infos)
+                for k in aggregated:
+                    aggregated[k] /= max(1, n_envs)
+                # 上报到 SwanLab
+                self.experiment.log(aggregated, step=step)
         return True
