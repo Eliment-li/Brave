@@ -30,7 +30,7 @@ class Args:
     repeat: int = 1
     seed: int = -1
     track: bool = True
-    enable_brave:bool = False
+    enable_brave:bool = True
     normalize: bool = True
     swanlab_project: str = "Brave"
     swanlab_workspace: str = "Eliment-li"
@@ -73,7 +73,10 @@ class BRSRewardWrapperV1(gym.Wrapper):
         self.min_cost = 0
         self.num_steps = 0
         return obs, info
-
+    def _get_state(self):
+        # MountainCar obs = [position, velocity]
+        pos, vel = self.env.unwrapped.state
+        return pos, vel
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         self.stander_episode_reward +=reward
@@ -90,6 +93,8 @@ class BRSRewardWrapperV1(gym.Wrapper):
         if terminated or truncated:
             info["stander_episode_reward_mean"] = self.stander_episode_reward/self.num_steps  # 更新累计 reward 到 info
             self.stander_episode_reward = 0
+            pos, vel = self._get_state()
+            print(f'num_steps = {self.num_steps}, term={terminated},trun={truncated},pos ={pos},vel={vel}reward ={reward}')
         return obs, reward, terminated, truncated, info
 
 class BRSRewardWrapperV2(gym.Wrapper):
