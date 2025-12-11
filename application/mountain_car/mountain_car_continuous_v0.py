@@ -11,7 +11,7 @@ import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.vec_env import VecNormalize
+from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
 
 from configs.base_args import get_root_path
 import swanlab
@@ -262,7 +262,7 @@ def train_and_evaluate():
             env = BRSRewardWrapperV1(env)
         return env
 
-    # 使用超参数
+    # tuned hyperparams from official stable-baselines3 https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/ppo.yml
     hyperparams = dict(
         policy="MlpPolicy",
         batch_size=args.n_steps,
@@ -281,13 +281,11 @@ def train_and_evaluate():
         seed=args.seed,
     )
 
-    # 创建环境
+    # 创建训练环境
     env = make_vec_env(make_env, n_envs=1, seed=args.seed)
-    # 是否归一化
-    if args.normalize:  # normalize: true
+    if args.normalize:
         env = VecNormalize(env, norm_obs=True, norm_reward=True)
 
-    # 创建PPO模型
     model = PPO(**hyperparams, env=env)
 
     # 训练
@@ -309,18 +307,49 @@ def train_and_evaluate():
     model_path = Path(args.model_dir) / f"{args.experiment_name}_seed{args.seed}.zip"
     save_model(model, str(model_path))
 
+    # 如果使用了 VecNormalize，把归一化统计单独保存出来，评估时复用
+    if args.normalize and isinstance(env, VecNormalize):
+        vecnorm_path = Path(args.model_dir) / f"{args.experiment_name}_vecnormalize.pkl"
+        env.save(str(vecnorm_path))
+    else:
+        vecnorm_path = None
 
     def make_eval_env():
+        """
+        评估环境构造：
+        - 未归一化：RecordVideo(gym.Env 或 BRSRewardWrapperV1)
+        - 归一化：在 RecordVideo 包裹的 env 外，再用 VecNormalize.load 创建 VecEnv
+        """
         plot_dir = Path(args.video_dir) / "plots"
-        env_ = gym.make(args.env_id, render_mode="rgb_array")
-        env_ = BRSRewardWrapperV1(env_, evaluate = True, plot_save_dir = plot_dir)
-        env_ = RecordVideo(
-            env_,
-            video_folder=str(args.video_dir),
-            episode_trigger=lambda ep_id: ep_id % args.video_freq == 0,
-            name_prefix=f"eval_{args.experiment_name}",
-        )
-        return env_
+
+        def _make_single_eval_env():
+            # 基础环境：render_mode="rgb_array" 以便 RecordVideo 录制
+            base_env = gym.make(args.env_id, render_mode="rgb_array")
+            if args.enable_brave:
+                base_env = BRSRewardWrapperV1(base_env, evaluate=True, plot_save_dir=plot_dir)
+
+            # 先在 gym.Env 上包 RecordVideo
+            video_env = RecordVideo(
+                base_env,
+                video_folder=str(args.video_dir),
+                episode_trigger=lambda ep_id: ep_id % args.video_freq == 0,
+                name_prefix=f"eval_{args.experiment_name}",
+            )
+            return video_env
+
+        if args.normalize and vecnorm_path is not None:
+            # 评估时也需要 VecNormalize：
+            # 1. 用 DummyVecEnv 把单个 env 包成 VecEnv
+            # 2. 用 VecNormalize.load 载入训练时的统计，设置 training=False
+            eval_vec_env = DummyVecEnv([_make_single_eval_env])
+            eval_vec_env = VecNormalize.load(str(vecnorm_path), eval_vec_env)
+            eval_vec_env.training = False
+            eval_vec_env.norm_reward = True
+            eval_vec_env.norm_obs = True
+            return eval_vec_env
+        else:
+            # 不使用归一化：直接返回 gym.Env（已带 RecordVideo）
+            return _make_single_eval_env()
 
     eval_env = make_eval_env()
 
