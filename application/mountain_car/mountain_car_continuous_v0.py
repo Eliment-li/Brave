@@ -41,13 +41,15 @@ class Args:
     model_dir: str = get_root_path()+"/results/checkpoints/MountainCarContinuous_v0"
     video_dir: str = get_root_path()+"/results/videos/MountainCarContinuous_v0"
     tags: list[str] = field(default_factory=list)
+    def reset_seed(self):
+        self.seed = torch.randint(0, 10000, (1,)).item()
     def finalize(self):
         self.experiment_name = self.env_id + '_' + arrow.now().format('MMDD_HHmm')
         if self.enable_brave:
             self.experiment_name += '_brave'
         #set seed to random value if seed is -1
         if self.seed == -1:
-            self.seed = torch.randint(0, 10000, (1,)).item()
+            self.reset_seed()
         print(f"Using seed: {self.seed}")
         if self.tags:
             parsed_tags = []
@@ -86,7 +88,7 @@ class BRSRewardWrapperV1(gym.Wrapper):
                 self.min_cost = self.cost
                 print(f'self.min_cost ={self.min_cost}')
             elif self.cost < self.min_cost:
-                reward=20
+                reward=40
                 self.min_cost = self.cost
                 print(f'self.min_cost ={self.min_cost}')
         self.num_steps += 1
@@ -348,6 +350,7 @@ if __name__ == "__main__":
     args = tyro.cli(Args)
     args.finalize()
     for i in range(args.repeat):
-        args.n_steps = 2**(i+3)  # ensure batch_size divides n_steps * n_envs
+        args.n_steps = 8  # ensure batch_size divides n_steps * n_envs
         train_and_evaluate()
-        time.sleep(60)
+        args.reset_seed()
+        time.sleep(30)
