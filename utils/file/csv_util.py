@@ -1,7 +1,9 @@
 from pathlib import Path
+from typing import Tuple
+import numpy as np
 
 from utils.file.file_util import get_root_dir
-rootdir = Path(get_root_dir())
+ROOT_DIR = Path(get_root_dir())
 
 import csv
 import datetime
@@ -13,16 +15,14 @@ rootdir = get_root_dir()
 
 def to_dataframe(abs_path=None, relative_path=None):
     import pandas as pd
-    if abs_path:
-        path = abs_path
+    if abs_path is not None:
+        path = Path(abs_path)
+    elif relative_path is not None:
+        rel_path = Path(relative_path)
+        path = rel_path if rel_path.is_absolute() else ROOT_DIR / rel_path
     else:
-        path = rootdir + sep + relative_path
-
-    df = pd.read_csv(path)
-    # Display the dataframe
-    return df
-
-
+        raise ValueError("abs_path 或 relative_path 至少提供一个")
+    return pd.read_csv(path)
 
 def read_numeric_csv(file_path):
     data = []
@@ -82,5 +82,32 @@ def append_data(file_path, data):
 
         writer.writerows(data)
 
+def replace_nan_with_average(arr: np.ndarray) -> np.ndarray:
+    arr = np.asarray(arr, dtype=float)
+    for idx, value in enumerate(arr):
+        if np.isnan(value):
+            prev_val = arr[idx - 1] if idx > 0 else np.nan
+            next_val = arr[idx + 1] if idx < len(arr) - 1 else np.nan
+            if not np.isnan(prev_val) and not np.isnan(next_val):
+                arr[idx] = (prev_val + next_val) / 2
+            elif not np.isnan(prev_val):
+                arr[idx] = prev_val
+            elif not np.isnan(next_val):
+                arr[idx] = next_val
+    return arr
 
-
+def load_series_from_csv(csv_path: str | Path) -> Tuple[np.ndarray, np.ndarray]:
+    csv_path = Path(csv_path)
+    df = (
+        to_dataframe(abs_path=str(csv_path))
+        if csv_path.is_absolute()
+        else to_dataframe(relative_path=str(csv_path))
+    )
+    if df.shape[1] < 2:
+        raise ValueError(f'文件 {csv_path} 至少需要包含 step 列和一列数据')
+    steps = df.iloc[:, 0].to_numpy()
+    values = np.stack(
+        [replace_nan_with_average(df[col].to_numpy()) for col in df.columns[1:]],
+        axis=1,
+    )
+    return steps, values.astype(float)
