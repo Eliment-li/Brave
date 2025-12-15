@@ -152,7 +152,7 @@ class SwanLabCallback(BaseCallback):
         infos = self.locals.get("infos", None)
         dones = self.locals.get("dones", None)
 
-        extra_keys =['stander_reward']
+        extra_keys =['standerd_reward','brs_bonus','stander_episode_reward_mean',r'original/ep_rew_mean']
 
         if dones[0]:
             extra_keys.append('stander_episode_reward_mean')
