@@ -13,6 +13,8 @@ from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 
+from application.ant.ant_v4_brs_wrapper import AntBRSRewardWrapperV1
+from application.wrappers.original_reward_info_wrapper import OriginalRewardInfoWrapper
 from configs.base_args import get_root_path
 import swanlab
 from utils.swanlab_callback import SwanLabCallback
@@ -23,10 +25,11 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 @dataclass
 class Args:
     env_id: str = "Ant-v4"
-    total_timesteps: int = int(1e6)
+    total_timesteps: int = int(1e4)
     repeat: int = 1
     seed: int = -1
     track: bool = True
+    enable_brave:bool = True
     swanlab_project: str = "Brave_Antv4"
     swanlab_workspace: str = "Eliment-li"
     swanlab_group: str = "td3_ant_standerd"
@@ -51,6 +54,10 @@ class Args:
 
     def finalize(self):
         self.experiment_name = self.env_id + '_' + arrow.now().format('MMDD_HHmm')
+        if self.enable_brave:
+            self.experiment_name += '_brave'
+        else:
+            self.experiment_name += '_standerd'
         if self.seed == -1:
             self.reset_seed()
         print(f"Using seed: {self.seed}")
@@ -69,11 +76,17 @@ def load_model(path: str, env) -> TD3:
     model = TD3.load(path, env=env)
     return model
 
+
 def train_and_evaluate():
     args_dict = asdict(args)
-
+    def make_env():
+        env = gym.make(args.env_id)
+        env = OriginalRewardInfoWrapper(env)
+        if args.enable_brave:
+            env = AntBRSRewardWrapperV1(env)
+        return env
     # 创建训练环境
-    env = make_vec_env(args.env_id, n_envs=1, seed=args.seed)
+    env = make_vec_env(make_env, n_envs=1, seed=args.seed)
 
     # 配置 Action Noise
     n_actions = env.action_space.shape[-1]
@@ -120,8 +133,8 @@ def train_and_evaluate():
     save_model(model, str(model_path))
 
     def make_eval_env():
-        # 评估环境：RecordVideo
         base_env = gym.make(args.env_id, render_mode="rgb_array")
+        base_env = OriginalRewardInfoWrapper(base_env)
         video_env = RecordVideo(
             base_env,
             video_folder=str(args.video_dir),
@@ -157,4 +170,3 @@ if __name__ == "__main__":
         train_and_evaluate()
         args.reset_seed()
         time.sleep(10)
-
