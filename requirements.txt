@@ -14,3 +14,4 @@ swanlab
 scikit-learn
 arrow
 stable-baselines3[extra]
+mujoco-py<2.2,>=2.1
