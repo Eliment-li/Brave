@@ -13,7 +13,7 @@ from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 
-from application.ant.ant_v4_brs_wrapper import AntBRSRewardWrapperV1
+from application.ant.ant_v4_brs_wrapper import AntBRSRewardWrapperV1,AntBRSRewardWrapperV2
 from application.wrappers.original_reward_info_wrapper import OriginalRewardInfoWrapper
 from configs.base_args import get_root_path
 import swanlab
@@ -25,10 +25,11 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 @dataclass
 class Args:
     env_id: str = "Ant-v4"
-    total_timesteps: int = int(1e4)
+    total_timesteps: int = int(1e5)
     repeat: int = 1
     seed: int = -1
-    track: bool = True
+    track: bool = False
+    reward_wrapper_version: int = 2 # 1 for AntBRSRewardWrapperV1, 2 for AntBRSRewardWrapperV2
     enable_brave:bool = True
     swanlab_project: str = "Brave_Antv4"
     swanlab_workspace: str = "Eliment-li"
@@ -83,7 +84,12 @@ def train_and_evaluate():
         env = gym.make(args.env_id)
         env = OriginalRewardInfoWrapper(env)
         if args.enable_brave:
-            env = AntBRSRewardWrapperV1(env)
+            if args.reward_wrapper_version == 1:
+                env = AntBRSRewardWrapperV1(env)
+            elif args.reward_wrapper_version == 2:
+                env = AntBRSRewardWrapperV2(env)
+            else:
+                env = AntBRSRewardWrapperV1(env)
         return env
     # 创建训练环境
     env = make_vec_env(make_env, n_envs=1, seed=args.seed)

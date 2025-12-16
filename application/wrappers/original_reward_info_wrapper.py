@@ -29,7 +29,7 @@ class OriginalRewardInfoWrapper(gym.Wrapper):
         info = dict(info)
 
         # 记录未被修改过的最原始 reward
-        info.setdefault("original_reward", reward)
+        info.setdefault(r"standerd_reward", reward)
 
         episode_done = terminated or truncated
         if episode_done:

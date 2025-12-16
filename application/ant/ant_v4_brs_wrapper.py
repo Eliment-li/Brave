@@ -42,7 +42,7 @@ class NovelRewardConfig:
     # - "const": always 1.0 when record broken
     # - "log": log(1 + delta_steps)
     # - "linear": delta_steps
-    bonus_fn: str = "const"
+    bonus_fn: str = "log"
 
 
 def _quat_to_euler_xyz(q: np.ndarray) -> Tuple[float, float, float]:
@@ -142,7 +142,6 @@ class AntBRSRewardWrapperV1(gym.Wrapper):
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         info = dict(info)
-        info["standerd_reward"] = float(reward)
         self.episode_step += 1
         self.global_step += 1
 
@@ -153,9 +152,6 @@ class AntBRSRewardWrapperV1(gym.Wrapper):
         info["brs_bonus"] = float(bonus)
         info["brs_bonus_detail"] = bonus_info
         info["brs_records_best_steps"] = dict(self.best_steps)
-
-        if bonus >0:
-            print(f"trigger brs step:{self.global_step}")
 
         return obs, total_reward, terminated, truncated, info
 
@@ -194,9 +190,13 @@ class AntBRSRewardWrapperV1(gym.Wrapper):
             else:
                 self._height_hold[h] = 0
 
+            r1=0
+            r2=0
+            r3=0
             # Check hold, the height must be maintained for several steps to get bonus to avoid reward hacking
             if self._height_hold[h] >= self.cfg.hold_steps_height:
                 b = self._maybe_break_record_and_bonus(key, self.episode_step, self.cfg.weight_height)
+                r1=b
                 if b > 0:
                     bonus += b
                     triggered.append({"event": key, "bonus": b})
@@ -216,6 +216,7 @@ class AntBRSRewardWrapperV1(gym.Wrapper):
 
             if self._speed_hold[v] >= self.cfg.hold_steps_speed:
                 b = self._maybe_break_record_and_bonus(key, self.episode_step, self.cfg.weight_speed)
+                r2 = b
                 if b > 0:
                     bonus += b
                     triggered.append({"event": key, "bonus": b})
@@ -238,6 +239,7 @@ class AntBRSRewardWrapperV1(gym.Wrapper):
 
             if self._stand_hold >= self.cfg.hold_steps_stand:
                 b = self._maybe_break_record_and_bonus(stand_key, self.episode_step, self.cfg.weight_stand)
+                r3 = b
                 if b > 0:
                     bonus += b
                     triggered.append({"event": stand_key, "bonus": b})
@@ -256,6 +258,8 @@ class AntBRSRewardWrapperV1(gym.Wrapper):
             },
             "episode_step": self.episode_step,
         }
+        if bonus >0:
+            bonus = math.log(1+bonus)+5
         return bonus, detail
 
     def _maybe_break_record_and_bonus(self, key: str, steps_now: int, weight: float) -> float:
@@ -283,3 +287,36 @@ class AntBRSRewardWrapperV1(gym.Wrapper):
             base = float(math.log(1.0 + float(delta)))
 
         return float(weight * base)
+
+
+class AntBRSRewardWrapperV2(AntBRSRewardWrapperV1):
+    """
+    Ant bonus wrapper that keeps V1's best-step bonuses while also granting
+    a one-time per-episode reward as soon as each threshold is first met.
+    """
+
+    def __init__(
+        self,
+        env: gym.Env,
+        config: Optional[NovelRewardConfig] = None,
+        initial_records: Optional[Dict[str, int]] = None,
+    ):
+        super().__init__(env, config=config, initial_records=initial_records)
+        self._episode_bonus_paid: set[str] = set()
+        self.bouns_cnt = 0
+
+    def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
+        obs, info = super().reset(seed=seed, options=options)
+        self._episode_bonus_paid.clear()
+        return obs, info
+
+    def _maybe_break_record_and_bonus(self, key: str, steps_now: int, weight: float) -> float:
+        episode_bonus = 0.0
+        if weight > 0 and key not in self._episode_bonus_paid:
+            episode_bonus = float(weight)
+            self._episode_bonus_paid.add(key)
+            self.bouns_cnt +=1
+            # if self.bouns_cnt %100==0:
+            #     print(f"episode bonus cnt:{self.bouns_cnt} key:{key} step:{steps_now}")
+        record_bonus = super()._maybe_break_record_and_bonus(key, steps_now, weight)
+        return episode_bonus + record_bonus
