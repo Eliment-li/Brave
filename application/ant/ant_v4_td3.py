@@ -3,6 +3,9 @@ from dataclasses import dataclass, asdict, field
 from pathlib import Path
 import os
 
+os.environ.setdefault("MUJOCO_GL", "egl")
+os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
+
 import gymnasium as gym
 import arrow
 import numpy as np
@@ -12,7 +15,7 @@ from stable_baselines3 import TD3
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.evaluation import evaluate_policy
 
-from application.ant.ant_v4_brs_wrapper import AntBRSRewardWrapperV1,AntBRSRewardWrapperV2
+from application.ant.ant_v4_brs_wrapper import AntBRSRewardWrapperV1, AntBRSRewardWrapperV2, AntBRSRewardWrapperV3
 from application.wrappers.original_reward_info_wrapper import OriginalRewardInfoWrapper
 from configs.base_args import get_root_path
 import swanlab
@@ -28,7 +31,7 @@ class Args:
     repeat: int = 1
     seed: int = -1
     track: bool = False
-    r_wrapper_version: int = 2 # 1 for AntBRSRewardWrapperV1, 2 for AntBRSRewardWrapperV2
+    r_wrapper_version: int = 1 # 1 for AntBRSRewardWrapperV1, 2 for AntBRSRewardWrapperV2
     enable_brave:bool = True
     swanlab_project: str = "Brave_Antv4"
     swanlab_workspace: str = "Eliment-li"
@@ -40,7 +43,7 @@ class Args:
     tags: list[str] = field(default_factory=list)
 
     # TD3 Hyperparameters
-    learning_rate: float = 1e-3
+    learning_rate: float = 1e-4
     batch_size: int = 256
     learning_starts: int = 10000
     train_freq: int = 1
@@ -76,20 +79,23 @@ def load_model(path: str, env) -> TD3:
     model = TD3.load(path, env=env)
     return model
 
+def add_reward_wrapper(env, args):
+    if args.enable_brave:
+        if args.r_wrapper_version == 1:
+            env = AntBRSRewardWrapperV1(env)
+        elif args.r_wrapper_version == 2:
+            env = AntBRSRewardWrapperV2(env)
+        elif args.r_wrapper_version == 3:
+            env = AntBRSRewardWrapperV3(env)
+        print(f'use reward wrapper v{args.r_wrapper_version}')
+    return env
 
 def train_and_evaluate():
     args_dict = asdict(args)
     def make_env():
-        env = gym.make("MyMujoco/AntSpeed-v0", reward_type="dense", target_speed=3.0)
+        env = gym.make("MyMujoco/AntSpeed-v0", reward_type="dense", target_speed=4.0)
         env = OriginalRewardInfoWrapper(env)
-        if args.enable_brave:
-            print(f'use reward wrapper v{args.r_wrapper_version}')
-            if args.r_wrapper_version == 1:
-                env = AntBRSRewardWrapperV1(env)
-            elif args.r_wrapper_version == 2:
-                env = AntBRSRewardWrapperV2(env)
-            else:
-                env = AntBRSRewardWrapperV1(env)
+        env = add_reward_wrapper(env, args)
         return env
     # 创建训练环境
     #env = make_vec_env(make_env, n_envs=1, seed=args.seed)
@@ -110,12 +116,12 @@ def train_and_evaluate():
         buffer_size=1000000,  # 默认通常较大
         learning_starts=args.learning_starts,
         batch_size=args.batch_size,
-        tau=0.005,
+        #tau=0.005,
         gamma=0.99,
         train_freq=args.train_freq,
         gradient_steps=args.gradient_steps,
         action_noise=action_noise,
-        policy_kwargs=dict(net_arch=args.net_arch),
+        #policy_kwargs=dict(net_arch=args.net_arch),
         verbose=1,
         seed=args.seed,
     )
