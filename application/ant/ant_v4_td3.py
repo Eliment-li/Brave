@@ -10,7 +10,6 @@ from gymnasium.wrappers import RecordVideo
 import torch
 from stable_baselines3 import TD3
 from stable_baselines3.common.noise import NormalActionNoise
-from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 
 from application.ant.ant_v4_brs_wrapper import AntBRSRewardWrapperV1,AntBRSRewardWrapperV2
@@ -19,16 +18,16 @@ from configs.base_args import get_root_path
 import swanlab
 from utils.swanlab_callback import SwanLabCallback
 import tyro
-
+import envs.mujoco.ant_v4_tasks
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 @dataclass
 class Args:
-    env_id: str = "Ant-v4"
-    total_timesteps: int = int(1e5)
+    env_id: str = "MyMujoco/AntStand-v0"
+    total_timesteps: int = int(1e4)
     repeat: int = 1
     seed: int = -1
-    track: bool = True
+    track: bool = False
     r_wrapper_version: int = 2 # 1 for AntBRSRewardWrapperV1, 2 for AntBRSRewardWrapperV2
     enable_brave:bool = True
     swanlab_project: str = "Brave_Antv4"
@@ -81,7 +80,7 @@ def load_model(path: str, env) -> TD3:
 def train_and_evaluate():
     args_dict = asdict(args)
     def make_env():
-        env = gym.make(args.env_id)
+        env = gym.make("MyMujoco/AntSpeed-v0", reward_type="dense", target_speed=3.0)
         env = OriginalRewardInfoWrapper(env)
         if args.enable_brave:
             print(f'use reward wrapper v{args.r_wrapper_version}')
@@ -93,7 +92,9 @@ def train_and_evaluate():
                 env = AntBRSRewardWrapperV1(env)
         return env
     # 创建训练环境
-    env = make_vec_env(make_env, n_envs=1, seed=args.seed)
+    #env = make_vec_env(make_env, n_envs=1, seed=args.seed)
+    env = make_env()
+
 
     # 配置 Action Noise
     n_actions = env.action_space.shape[-1]
@@ -103,7 +104,8 @@ def train_and_evaluate():
         action_noise = None # 或者实现 OrnsteinUhlenbeckActionNoise
 
     hyperparams = dict(
-        policy="MlpPolicy",
+        #policy="MlpPolicy",
+        policy="MultiInputPolicy",
         learning_rate=args.learning_rate,
         buffer_size=1000000,  # 默认通常较大
         learning_starts=args.learning_starts,
