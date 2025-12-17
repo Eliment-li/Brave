@@ -28,8 +28,8 @@ class Args:
     total_timesteps: int = int(1e5)
     repeat: int = 1
     seed: int = -1
-    track: bool = False
-    reward_wrapper_version: int = 2 # 1 for AntBRSRewardWrapperV1, 2 for AntBRSRewardWrapperV2
+    track: bool = True
+    r_wrapper_version: int = 2 # 1 for AntBRSRewardWrapperV1, 2 for AntBRSRewardWrapperV2
     enable_brave:bool = True
     swanlab_project: str = "Brave_Antv4"
     swanlab_workspace: str = "Eliment-li"
@@ -84,9 +84,10 @@ def train_and_evaluate():
         env = gym.make(args.env_id)
         env = OriginalRewardInfoWrapper(env)
         if args.enable_brave:
-            if args.reward_wrapper_version == 1:
+            print(f'use reward wrapper v{args.r_wrapper_version}')
+            if args.r_wrapper_version == 1:
                 env = AntBRSRewardWrapperV1(env)
-            elif args.reward_wrapper_version == 2:
+            elif args.r_wrapper_version == 2:
                 env = AntBRSRewardWrapperV2(env)
             else:
                 env = AntBRSRewardWrapperV1(env)
