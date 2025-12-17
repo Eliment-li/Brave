@@ -98,6 +98,7 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
                 "desired_goal": spaces.Box(-np.inf, np.inf, shape=obs["desired_goal"].shape, dtype=np.float64),
             }
         )
+        print(f"AntTaskEnv initialized with task={self.task}, reward_type={self.reward_type}")
 
     # ----------------- helpers -----------------
     @property
@@ -148,12 +149,14 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
 
     def _task_metric(self, achieved: np.ndarray, desired: np.ndarray) -> float:
         """
-        A single scalar metric for dense shaping.
-        We use: -(desired - achieved) if below target; capped at 0 when reached.
-        So it is <= 0 always, and becomes 0 at success.
+        Dense shaping per task:
+          - speed:  -abs(achieved - desired)  (peak at target speed, penalize偏差)
+          - stand/far: achieved - desired    (超过目标继续加分)
         """
-        gap = float(desired[0] - achieved[0])
-        return -max(gap, 0.0)
+        diff = float(achieved[0] - desired[0])
+        if self.task == "speed":
+            return -abs(diff)
+        return diff
 
     # ----------------- gym API -----------------
     def _get_obs(self):
@@ -199,7 +202,7 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         return obs, reward, terminated, truncated, info
 
     def reset_model(self):
-        self._sample_goal()
+        #self._sample_goal()
 
         noise_low, noise_high = -self._reset_noise_scale, self._reset_noise_scale
         qpos = self.init_qpos + self.np_random.uniform(noise_low, noise_high, size=self.model.nq)
@@ -231,6 +234,6 @@ class AntFar(AntTaskEnv):
 
 
 # -------- registration (import this module once) --------
-register(id="MyMujoco/AntStand-v0", entry_point="envs.mujoco.ant_v4_tasks:AntStand", max_episode_steps=200)
-register(id="MyMujoco/AntSpeed-v0", entry_point="envs.mujoco.ant_v4_tasks:AntSpeed", max_episode_steps=200)
-register(id="MyMujoco/AntFar-v0", entry_point="envs.mujoco.ant_v4_tasks:AntFar", max_episode_steps=200)
+register(id="MyMujoco/AntStand-v0", entry_point="envs.mujoco.ant_v4_tasks:AntStand", max_episode_steps=1000)
+register(id="MyMujoco/AntSpeed-v0", entry_point="envs.mujoco.ant_v4_tasks:AntSpeed", max_episode_steps=1000)
+register(id="MyMujoco/AntFar-v0", entry_point="envs.mujoco.ant_v4_tasks:AntFar", max_episode_steps=1000)

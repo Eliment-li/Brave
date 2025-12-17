@@ -19,7 +19,7 @@ def _make_thresholds(start: float, end: float, step: float) -> Tuple[float, ...]
 class NovelRewardConfig:
     # Achievement thresholds
     height_thresholds: Tuple[float, ...] = _make_thresholds(0.6, 0.8, 0.01)
-    speed_thresholds: Tuple[float, ...] = _make_thresholds(1.0, 3.0, 0.01)
+    speed_thresholds: Tuple[float, ...] = _make_thresholds(1.0, 4.0, 0.01)
 
     # Anti-noise: require condition to hold for N consecutive steps
     hold_steps_height: int = 5
@@ -34,9 +34,9 @@ class NovelRewardConfig:
 
     # Bonus shaping
     # bonus = weight * bonus_fn(delta_steps)
-    weight_height: float = 1.0
-    weight_speed: float = 1.0
-    weight_stand: float = 3.0
+    weight_height: float = 0
+    weight_speed: float = 3
+    weight_stand: float = 0
 
     # bonus_fn options:
     # - "const": always 1.0 when record broken
@@ -320,3 +320,52 @@ class AntBRSRewardWrapperV2(AntBRSRewardWrapperV1):
             #     print(f"episode bonus cnt:{self.bouns_cnt} key:{key} step:{steps_now}")
         record_bonus = super()._maybe_break_record_and_bonus(key, steps_now, weight)
         return episode_bonus + record_bonus
+
+
+
+class AntBRSRewardWrapperV3(gym.Wrapper):
+    """给在当前 episode 内刷新任务指标纪录的行为额外奖励。"""
+
+    def __init__(self, env, bonus: float = 5.0):
+        super().__init__(env)
+        self._bonus = float(bonus)
+        self._task = getattr(self.env.unwrapped, "task", None)
+        if self._task not in {"stand", "speed", "far"}:
+            raise ValueError(f"Unsupported task: {self._task}")
+        self.episode_max = -np.inf
+
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        self.episode_max = self._current_metric()
+        #self.episode_max == -np.inf
+        info = info or {}
+        info["episode_max_metric"] = self.episode_max
+        return obs, info
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        metric = self._current_metric()
+        bonus = 0.0
+        if  self.episode_max == -np.inf:
+            self.episode_max = metric
+        if metric > self.episode_max:
+            self.episode_max = metric
+            bonus = self._bonus
+        reward += bonus
+        info = info or {}
+        info["episode_max_"+self._task] = self.episode_max
+        #info["episode_max_metric"] = self.episode_max
+        info[str(self._task)] = metric
+        info["brs_bonus"] = bonus
+        return obs, reward, terminated, truncated, info
+
+    def _current_metric(self) -> float:
+        data = self.env.unwrapped.data
+        qpos = data.qpos.ravel()
+        qvel = data.qvel.ravel()
+        if self._task == "stand":
+            return float(qpos[2])
+        if self._task == "speed":
+            return float(qvel[0])
+        else:  # far
+            return float(np.linalg.norm(qpos[:2]))
