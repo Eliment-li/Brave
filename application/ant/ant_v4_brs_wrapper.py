@@ -5,6 +5,8 @@ from typing import Dict, List, Optional, Tuple
 import gymnasium as gym
 import numpy as np
 
+from utils.calc_util import SlideWindow
+
 
 def _make_thresholds(start: float, end: float, step: float) -> Tuple[float, ...]:
     values: List[float] = []
@@ -326,25 +328,27 @@ class AntBRSRewardWrapperV2(AntBRSRewardWrapperV1):
 class AntBRSRewardWrapperV3(gym.Wrapper):
     """给在当前 episode 内刷新任务指标纪录的行为额外奖励。"""
 
-    def __init__(self, env, bonus: float = 5.0):
+    def __init__(self, env, bonus: float = 10):
         super().__init__(env)
         self._bonus = float(bonus)
         self._task = getattr(self.env.unwrapped, "task", None)
         if self._task not in {"stand", "speed", "far"}:
             raise ValueError(f"Unsupported task: {self._task}")
         self.episode_max = -np.inf
+        self.slidewindow = SlideWindow(size=200)
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
         self.episode_max = self._current_metric()
         #self.episode_max == -np.inf
         info = info or {}
-        info["episode_max_metric"] = self.episode_max
+        info["episode_max_metric"] = self.slidewindow.average
         return obs, info
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         metric = self._current_metric()
+        self.slidewindow.next(metric)
         bonus = 0.0
         if  self.episode_max == -np.inf:
             self.episode_max = metric
