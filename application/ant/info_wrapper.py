@@ -8,6 +8,7 @@ import numpy as np
 class OriginalRewardInfoWrapper(gym.Wrapper):
     """
     记录最原始的 reward，并维护与 stable-baselines3 Monitor 相同含义的 ep_len_mean。
+    并记录相关 metrics 到 info
     """
     def __init__(self, env: gym.Env, ep_len_buffer_size: int = 100):
         super().__init__(env)
@@ -43,5 +44,18 @@ class OriginalRewardInfoWrapper(gym.Wrapper):
         if self._ep_rew_buffer:
             info[r"original/ep_rew_mean"] = float(np.mean(self._ep_rew_buffer))
 
+        #put metrics into info
+        for m in ["stand", "speed", "height"]:
+            info.setdefault(m, self._current_metric()[["stand", "speed", "height"].index(m)])
         return obs, reward, terminated, truncated, info
+
+    def _current_metric(self) -> float:
+        data = self.env.unwrapped.data
+        qpos = data.qpos.ravel()
+        qvel = data.qvel.ravel()
+        stand = float(qpos[2])
+        speed = float(qvel[0])
+        height = float(np.linalg.norm(qpos[:2]))
+
+        return stand, speed, height
 

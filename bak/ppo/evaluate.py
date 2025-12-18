@@ -4,7 +4,7 @@ import torch.optim as optim
 
 from configs.ppo_args import PpoAtariArgs
 from core.model.checkpoint import load_checkpoint
-from application.ppo.ppo_mountain_car import Agent as TrainAgent, make_env
+from bak.ppo.ppo_mountain_car import Agent as TrainAgent, make_env
 
 
 def make_eval_envs(env_id: str, run_name: str = "eval_dummy"):

@@ -4,6 +4,11 @@ from pathlib import Path
 import os
 from swanlab.env import is_windows
 
+from application.ant.brs_wrapper.v1 import AntBRSRewardWrapperV1
+from application.ant.brs_wrapper.v2 import AntBRSRewardWrapperV2
+from application.ant.brs_wrapper.v3 import AntBRSRewardWrapperV3
+from application.ant.brs_wrapper.v4 import AntBRSRewardWrapperV4
+
 if not is_windows():
     os.environ.setdefault("MUJOCO_GL", "egl")
     os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
@@ -13,35 +18,37 @@ import arrow
 import numpy as np
 from gymnasium.wrappers import RecordVideo
 import torch
+import torch.optim as optim
 from stable_baselines3 import TD3
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.evaluation import evaluate_policy
 
-from application.ant.ant_v4_brs_wrapper import AntBRSRewardWrapperV1, AntBRSRewardWrapperV2, AntBRSRewardWrapperV3
-from application.wrappers.original_reward_info_wrapper import OriginalRewardInfoWrapper
+from application.ant.info_wrapper import OriginalRewardInfoWrapper
 from configs.base_args import get_root_path
 import swanlab
 from utils.swanlab_callback import SwanLabCallback
 import tyro
-import envs.mujoco.ant_v4_tasks
+
 os.environ["SDL_VIDEODRIVER"] = "dummy"
+
+
 
 @dataclass
 class Args:
-    env_id: str = "MyMujoco/AntStand-v0"
+    env_id: str = "MyMujoco/AntSpeed-v0"
     total_timesteps: int = int(1e4)
     repeat: int = 1
     seed: int = -1
     track: bool = True
-    r_wrapper_version: int = 3 # 1 for AntBRSRewardWrapperV1, 2 for AntBRSRewardWrapperV2
+    r_wrapper_ver: int = -1 # 1 for AntBRSRewardWrapperV1, 2 for AntBRSRewardWrapperV2
     enable_brave:bool = True
     swanlab_project: str = "Brave_Antv4_speed"
     swanlab_workspace: str = "Eliment-li"
     swanlab_group: str = "td3_ant_standerd"
     root_path: str = get_root_path()
     n_eval_episodes: int = 1
-    model_dir: str = get_root_path()+"/results/checkpoints/Ant_v3"
-    video_dir: str = get_root_path()+"/results/videos/Ant_v3"
+    model_dir: str = get_root_path()+"/results/checkpoints/Ant"
+    video_dir: str = get_root_path()+"/results/videos/Ant"
     tags: list[str] = field(default_factory=list)
 
     # TD3 Hyperparameters
@@ -53,6 +60,8 @@ class Args:
     net_arch: list[int] = field(default_factory=lambda: [400, 300])
     noise_std: float = 0.1
     noise_type: str = 'normal'
+    optimizer: str = "adam"
+    optimizer_eps: float = 1e-7
 
     def reset_seed(self):
         self.seed = torch.randint(0, 10000, (1,)).item()
@@ -72,9 +81,36 @@ class Args:
             for tag in self.tags:
                 parsed_tags.extend([t.strip() for t in tag.split(',') if t.strip()])
             self.tags = parsed_tags
-            self.tags.append(f'warpperv{self.r_wrapper_version}')
+            self.tags.append(f'warpperv{self.r_wrapper_ver}')
         Path(self.model_dir).mkdir(parents=True, exist_ok=True)
         Path(self.video_dir).mkdir(parents=True, exist_ok=True)
+
+_WRAPPER_MAP = {
+    1: AntBRSRewardWrapperV1,
+    2: AntBRSRewardWrapperV2,
+    3: AntBRSRewardWrapperV3,
+    4: AntBRSRewardWrapperV4,
+}
+
+_OPTIMIZER_MAP = {
+    "adam": optim.Adam,
+    "adamw": optim.AdamW,
+    "rmsprop": optim.RMSprop,
+}
+
+def resolve_optimizer(name: str):
+    try:
+        return _OPTIMIZER_MAP[name.lower()]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported optimizer '{name}'. Available: {list(_OPTIMIZER_MAP)}") from exc
+
+def make_ant_brs_wrapper(env, version: int):
+    """根据版本号返回对应的 Ant BRS reward wrapper。"""
+    wrapper_cls = _WRAPPER_MAP.get(version)
+    print(f'use reward wrapper v{str(wrapper_cls)}')
+    if wrapper_cls is None:
+        raise ValueError(f"未知的 AntBRSRewardWrapper 版本: {version}")
+    return wrapper_cls(env)
 
 def save_model(model: TD3, path: str) -> None:
     model.save(path)
@@ -85,13 +121,7 @@ def load_model(path: str, env) -> TD3:
 
 def add_reward_wrapper(env, args):
     if args.enable_brave:
-        if args.r_wrapper_version == 1:
-            env = AntBRSRewardWrapperV1(env)
-        elif args.r_wrapper_version == 2:
-            env = AntBRSRewardWrapperV2(env)
-        elif args.r_wrapper_version == 3:
-            env = AntBRSRewardWrapperV3(env)
-        print(f'use reward wrapper v{args.r_wrapper_version}')
+        env = make_ant_brs_wrapper(env, args.r_wrapper_ver)
     return env
 
 def train_and_evaluate():
@@ -104,7 +134,6 @@ def train_and_evaluate():
     # 创建训练环境
     #env = make_vec_env(make_env, n_envs=1, seed=args.seed)
     env = make_env()
-
 
     # 配置 Action Noise
     n_actions = env.action_space.shape[-1]
@@ -125,7 +154,11 @@ def train_and_evaluate():
         train_freq=args.train_freq,
         gradient_steps=args.gradient_steps,
         action_noise=action_noise,
-        #policy_kwargs=dict(net_arch=args.net_arch),
+        # policy_kwargs=dict(
+        #     #net_arch=args.net_arch,
+        #     optimizer_class=resolve_optimizer(args.optimizer),
+        #     optimizer_kwargs=dict(eps=args.optimizer_eps),
+        # ),
         verbose=1,
         seed=args.seed,
     )
