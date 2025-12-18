@@ -87,7 +87,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     env = ProcessObsInputEnv(gym.make(args.env_id, render_mode="rgb_array"))
     if args.enable_brave:
-        from core.brs_mountaincar_wrapper import BRSRewardWrapper
+        from application.mountain_car.brs_mountaincar_wrapper import BRSRewardWrapper
         env = BRSRewardWrapper(env)
     env = RecordEpisodeStatistics(env)
     if args.capture_video:

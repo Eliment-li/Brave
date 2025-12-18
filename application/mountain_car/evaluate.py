@@ -12,7 +12,7 @@ from configs.dqn_args import DqnArgs
 def make_eval_env(args: DqnArgs, video_dir: str | None = None):
     env = ProcessObsInputEnv(gym.make(args.env_id, render_mode="rgb_array"))
     if args.enable_brave:
-        from core.brs_mountaincar_wrapper import BRSRewardWrapper
+        from application.mountain_car.brs_mountaincar_wrapper import BRSRewardWrapper
         env = BRSRewardWrapper(env)
     env = RecordEpisodeStatistics(env)
     if video_dir is not None:
