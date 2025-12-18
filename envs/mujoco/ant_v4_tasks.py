@@ -199,6 +199,9 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
             "desired_goal": desired.copy(),
         }
         # obs = obs['observation']
+        if success:
+            terminated = True
+            truncated = True
         return obs, reward, terminated, truncated, info
 
     def reset_model(self):
