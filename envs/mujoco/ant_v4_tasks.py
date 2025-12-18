@@ -237,6 +237,6 @@ class AntFar(AntTaskEnv):
 
 
 # -------- registration (import this module once) --------
-register(id="MyMujoco/AntStand-v0", entry_point="envs.mujoco.ant_v4_tasks:AntStand", max_episode_steps=1000)
-register(id="MyMujoco/AntSpeed-v0", entry_point="envs.mujoco.ant_v4_tasks:AntSpeed", max_episode_steps=1000)
-register(id="MyMujoco/AntFar-v0", entry_point="envs.mujoco.ant_v4_tasks:AntFar", max_episode_steps=1000)
+register(id="MyMujoco/AntStand-v0", entry_point="envs.mujoco.ant_v4_tasks:AntStand", max_episode_steps=200)
+register(id="MyMujoco/AntSpeed-v0", entry_point="envs.mujoco.ant_v4_tasks:AntSpeed", max_episode_steps=200)
+register(id="MyMujoco/AntFar-v0", entry_point="envs.mujoco.ant_v4_tasks:AntFar", max_episode_steps=200)
