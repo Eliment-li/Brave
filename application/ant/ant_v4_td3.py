@@ -28,7 +28,7 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 @dataclass
 class Args:
-    env_id: str = "MyMujoco/AntStand-v0"
+    env_id: str = "MyMujoco/AntSpeed-v0"
     total_timesteps: int = int(1e4)
     repeat: int = 1
     seed: int = -1
@@ -97,7 +97,7 @@ def add_reward_wrapper(env, args):
 def train_and_evaluate():
     args_dict = asdict(args)
     def make_env():
-        env = gym.make("MyMujoco/AntSpeed-v0", reward_type="dense", target_speed=4.0)
+        env = gym.make(args.env_id, reward_type="sparse", target_speed=4.5)
         env = OriginalRewardInfoWrapper(env)
         env = add_reward_wrapper(env, args)
         return env
