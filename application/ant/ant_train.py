@@ -127,7 +127,7 @@ def add_reward_wrapper(env, args):
 def train_and_evaluate():
     args_dict = asdict(args)
     def make_env():
-        env = gym.make("MyMujoco/AntSpeed-v0", reward_type="dense", target_speed=4.0)
+        env = gym.make(args.env_id, reward_type="sparse", target_speed=4.5)
         env = OriginalRewardInfoWrapper(env)
         env = add_reward_wrapper(env, args)
         return env

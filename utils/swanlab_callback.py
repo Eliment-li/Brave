@@ -82,7 +82,7 @@ class SwanLabCallback(BaseCallback):
         self._run = None
 
         tags = tags or []
-        tags.append("🤖stable_baselines3") if "🤖stable_baselines3" not in tags else None
+        #tags.append("🤖stable_baselines3") if "🤖stable_baselines3" not in tags else None
 
         self._swanlab_init: Dict[str, Any] = {
             "project": project,
