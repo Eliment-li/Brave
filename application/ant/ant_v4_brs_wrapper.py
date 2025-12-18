@@ -336,6 +336,8 @@ class AntBRSRewardWrapperV3(gym.Wrapper):
             raise ValueError(f"Unsupported task: {self._task}")
         self.episode_max = -np.inf
         self.slidewindow = SlideWindow(size=200)
+        self.episode_metric = SlideWindow(size=99999)
+        self.episode_metric_mean_max=0
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
@@ -343,24 +345,39 @@ class AntBRSRewardWrapperV3(gym.Wrapper):
         #self.episode_max == -np.inf
         info = info or {}
         info["episode_max_metric"] = self.slidewindow.average
+
+        self.episode_metric.reset()
+
         return obs, info
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         metric = self._current_metric()
+        self.episode_metric.next(metric)
         self.slidewindow.next(metric)
-        bonus = 0.0
+        bonus = 50
         if  self.episode_max == -np.inf:
             self.episode_max = metric
         if metric > self.episode_max:
             self.episode_max = metric
             bonus = self._bonus
+
         reward += bonus
         info = info or {}
         info["episode_max_"+self._task] = self.episode_max
         #info["episode_max_metric"] = self.episode_max
         info[str(self._task)] = metric
         info["brs_bonus"] = bonus
+
+        if  terminated or truncated:
+            mean_metric = self.episode_metric.average
+            if self.episode_metric_mean_max ==0:
+                self.episode_metric_mean_max = mean_metric
+            if mean_metric > self.episode_metric_mean_max:
+                self.episode_metric_mean_max = mean_metric
+            reward +=100
+            info["stander_episode_reward_mean"] = mean_metric
+
         return obs, reward, terminated, truncated, info
 
     def _current_metric(self) -> float:
@@ -373,3 +390,70 @@ class AntBRSRewardWrapperV3(gym.Wrapper):
             return float(qvel[0])
         else:  # far
             return float(np.linalg.norm(qpos[:2]))
+
+
+
+# python
+class AntBRSRewardWrapperV4(gym.Wrapper):
+    def __init__(
+        self,
+        env: gym.Env,
+        task: str,
+        gamma: float = 0.99,
+        beta: float = 1.05,
+        min_bonus: float = 0.01,
+    ):
+        super().__init__(env)
+        if task not in {"stand", "speed", "far"}:
+            raise ValueError(f"Unsupported task: {task}")
+        self._task = task
+        self.gamma = float(gamma)
+        self.beta = float(beta)
+        self.min_bonus = float(min_bonus)
+        self.metric_max = -np.inf
+        self.rdcr = 0.0
+        self.rdcr_max = 0.0
+
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        self.metric_max = self._current_metric()
+        self.rdcr = 0.0
+        self.rdcr_max = 0.0
+        info = dict(info or {})
+        info["rdcr"] = self.rdcr
+        info["rdcr_max"] = self.rdcr_max
+        info["metric_max_"+self._task] = self.metric_max
+        return obs, info
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        metric = self._current_metric()
+        bonus = 0.0
+        if metric > self.metric_max:
+            self.metric_max = metric
+            target = self.beta * (self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus
+            bonus = self._signed_log(max(target, self.min_bonus))
+        self.rdcr = self.gamma * self.rdcr + bonus
+        self.rdcr_max = max(self.rdcr_max, self.rdcr)
+        total_reward = reward + bonus
+        info = dict(info or {})
+        info["brs_bonus"] = bonus
+        info["rdcr"] = self.rdcr
+        info["rdcr_max"] = self.rdcr_max
+        info["metric_"+self._task] = metric
+        info["metric_max_"+self._task] = self.metric_max
+        return obs, total_reward, terminated, truncated, info
+
+    def _current_metric(self) -> float:
+        data = self.env.unwrapped.data
+        qpos = data.qpos.ravel()
+        qvel = data.qvel.ravel()
+        if self._task == "stand":
+            return float(qpos[2])
+        if self._task == "speed":
+            return float(qvel[0])
+        return float(np.linalg.norm(qpos[:2]))
+
+    @staticmethod
+    def _signed_log(x: float) -> float:
+        return math.copysign(math.log1p(abs(x)), x)

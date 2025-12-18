@@ -2,9 +2,11 @@ import time
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
 import os
+from swanlab.env import is_windows
 
-os.environ.setdefault("MUJOCO_GL", "egl")
-os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
+if not is_windows():
+    os.environ.setdefault("MUJOCO_GL", "egl")
+    os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
 
 import gymnasium as gym
 import arrow
@@ -30,14 +32,14 @@ class Args:
     total_timesteps: int = int(1e4)
     repeat: int = 1
     seed: int = -1
-    track: bool = False
-    r_wrapper_version: int = 1 # 1 for AntBRSRewardWrapperV1, 2 for AntBRSRewardWrapperV2
+    track: bool = True
+    r_wrapper_version: int = 3 # 1 for AntBRSRewardWrapperV1, 2 for AntBRSRewardWrapperV2
     enable_brave:bool = True
-    swanlab_project: str = "Brave_Antv4"
+    swanlab_project: str = "Brave_Antv4_speed"
     swanlab_workspace: str = "Eliment-li"
     swanlab_group: str = "td3_ant_standerd"
     root_path: str = get_root_path()
-    n_eval_episodes: int = 3
+    n_eval_episodes: int = 1
     model_dir: str = get_root_path()+"/results/checkpoints/Ant_v3"
     video_dir: str = get_root_path()+"/results/videos/Ant_v3"
     tags: list[str] = field(default_factory=list)
@@ -70,6 +72,7 @@ class Args:
             for tag in self.tags:
                 parsed_tags.extend([t.strip() for t in tag.split(',') if t.strip()])
             self.tags = parsed_tags
+            self.tags.append(f'warpperv{self.r_wrapper_version}')
         Path(self.model_dir).mkdir(parents=True, exist_ok=True)
         Path(self.video_dir).mkdir(parents=True, exist_ok=True)
 
