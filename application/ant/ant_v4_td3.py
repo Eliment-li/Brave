@@ -56,7 +56,8 @@ class Args:
         self.seed = torch.randint(0, 10000, (1,)).item()
 
     def finalize(self):
-        self.experiment_name = self.env_id + '_' + arrow.now().format('MMDD_HHmm')
+        safe_env = self.env_id.replace("/", "_")
+        self.experiment_name = safe_env + '_' + arrow.now().format('MMDD_HHmm')
         if self.enable_brave:
             self.experiment_name += '_brave'
         else:
@@ -150,6 +151,7 @@ def train_and_evaluate():
     def make_eval_env():
         base_env = gym.make(args.env_id, render_mode="rgb_array")
         base_env = OriginalRewardInfoWrapper(base_env)
+        base_env = add_reward_wrapper(base_env, args)
         video_env = RecordVideo(
             base_env,
             video_folder=str(args.video_dir),
