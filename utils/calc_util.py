@@ -155,13 +155,12 @@ this is for evn to calc rescent dist
         print(f"捕获到预期错误: {e}")  # 期望: 窗口大小必须为正整数
 '''
 class SlideWindow:
-    def __init__(self, size):
+    def __init__(self, size:int):
         self.size = size
         self.queue = deque()
         self.total = 0.0
-        self.avg = 0.0
 
-    def next(self, val):
+    def next(self, val:float)->float:
         if len(self.queue) == self.size:
             self.total -= self.queue.popleft()
         self.queue.append(val)
@@ -173,7 +172,7 @@ class SlideWindow:
         self.total = 0.0
 
     @property
-    def average(self):
+    def average(self)->float:
         if self.queue:
             return self.total / len(self.queue)
         else:
