@@ -19,7 +19,7 @@ from stable_baselines3 import TD3
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.evaluation import evaluate_policy
 
-from application.ant.info_wrapper import OriginalRewardInfoWrapper
+from application.ant.ant_info_wrapper import OriginalRewardInfoWrapper
 from configs.base_args import get_root_path
 import swanlab
 from utils.swanlab_callback import SwanLabCallback
@@ -32,16 +32,15 @@ if not is_windows():
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
-
 @dataclass
 class Args:
     env_id: str = "AntSpeed-v0"
     total_timesteps: int = int(1e4)
     repeat: int = 1
     seed: int = -1
-    track: bool = True
+    track: bool = False
     r_wrapper_ver: int = -1 # 1 for AntBRSRewardWrapperV1, 2 for AntBRSRewardWrapperV2
-    enable_brave:bool = True
+    reward_mode:str = 'standerd' # 'brave' or 'standerd' or 'rnd' or....
     swanlab_project: str = "Brave_Antv4_speed"
     swanlab_workspace: str = "Eliment-li"
     swanlab_group: str = "td3_ant_standerd"
@@ -69,10 +68,7 @@ class Args:
     def finalize(self):
         safe_env = self.env_id.replace("/", "_")
         self.experiment_name = safe_env + '_' + arrow.now().format('MMDD_HHmm')
-        if self.enable_brave:
-            self.experiment_name += '_brave'
-        else:
-            self.experiment_name += '_standerd'
+        self.experiment_name += ('_'+self.reward_mode)
         if self.seed == -1:
             self.reset_seed()
         print(f"Using seed: {self.seed}")
@@ -81,7 +77,9 @@ class Args:
             for tag in self.tags:
                 parsed_tags.extend([t.strip() for t in tag.split(',') if t.strip()])
             self.tags = parsed_tags
-            self.tags.append(f'warpperv{self.r_wrapper_ver}')
+            if self.reward_mode  == 'brave':
+                self.tags.append(f'warpperv{self.r_wrapper_ver}')
+            self.tags.append(self.reward_mode)
         Path(self.model_dir).mkdir(parents=True, exist_ok=True)
         Path(self.video_dir).mkdir(parents=True, exist_ok=True)
 
@@ -120,8 +118,16 @@ def load_model(path: str, env) -> TD3:
     return model
 
 def add_reward_wrapper(env, args):
-    if args.enable_brave:
-        env = make_ant_brs_wrapper(env, args.r_wrapper_ver)
+    print(f'Adding reward wrapper: {args.reward_mode}')
+    match args.reward_mode:
+        case 'brave':
+            env = make_ant_brs_wrapper(env, args.r_wrapper_ver)
+        case 'rnd':
+            from baseline.rnd import RNDRewardWrapper
+            env = RNDRewardWrapper(env, beta=1.0)
+        case 'standerd':
+            pass
+
     return env
 
 def train_and_evaluate():
