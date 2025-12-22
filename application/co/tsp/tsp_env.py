@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 
-from application.base import CandidateLocalSearchEnv
+from application.co.base import CandidateLocalSearchEnv
 
 
 @dataclass(frozen=True)

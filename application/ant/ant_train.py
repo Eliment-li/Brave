@@ -9,10 +9,6 @@ from application.ant.brs_wrapper.v2 import AntBRSRewardWrapperV2
 from application.ant.brs_wrapper.v3 import AntBRSRewardWrapperV3
 from application.ant.brs_wrapper.v4 import AntBRSRewardWrapperV4
 
-if not is_windows():
-    os.environ.setdefault("MUJOCO_GL", "egl")
-    os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
-
 import gymnasium as gym
 import arrow
 import numpy as np
@@ -28,14 +24,18 @@ from configs.base_args import get_root_path
 import swanlab
 from utils.swanlab_callback import SwanLabCallback
 import tyro
+import application.ant.ant_tasks
+
+if not is_windows():
+    os.environ.setdefault("MUJOCO_GL", "egl")
+    os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 
-
 @dataclass
 class Args:
-    env_id: str = "MyMujoco/AntSpeed-v0"
+    env_id: str = "AntSpeed-v0"
     total_timesteps: int = int(1e4)
     repeat: int = 1
     seed: int = -1
