@@ -8,8 +8,8 @@ class AntBRSRewardWrapperV4(gym.Wrapper):
         self,
         env: gym.Env,
         gamma: float = 0.99,
-        beta: float = 1.05,
-        min_bonus: float = 0.05,
+        beta: float = 1.1,
+        min_bonus: float = 0.01,
     ):
         super().__init__(env)
 
