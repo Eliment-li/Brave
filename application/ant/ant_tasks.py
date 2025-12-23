@@ -32,9 +32,9 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         reward_type: str = None,  # "sparse" | "dense"  <-- single switch
         threshold: float = 0.1,
         random_goal: bool = False,
-        target_height: float = 0.9,
-        target_speed: float = 4.0,
-        target_dist: float = 4.0,
+        target_height: float = None,#0.9
+        target_speed: float = None,
+        target_dist: float = None,#4.0
         # costs/health (kept close to Gymnasium Ant defaults)
         ctrl_cost_weight: float = 0.5,
         healthy_reward: float = 1.0,
