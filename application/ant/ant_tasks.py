@@ -28,8 +28,8 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
     def __init__(
         self,
         xml_file: str = "ant.xml",
-        task: str = "stand",  # "stand" | "speed" | "far"
-        reward_type: str = "sparse",  # "sparse" | "dense"  <-- single switch
+        task: str = None,  # "stand" | "speed" | "far"
+        reward_type: str = None,  # "sparse" | "dense"  <-- single switch
         threshold: float = 0.1,
         random_goal: bool = False,
         target_height: float = 0.9,
@@ -190,7 +190,6 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         else:  # dense
             # shaped metric in [-inf, 0], + healthy_reward, - ctrl_cost
             reward = float(self._task_metric(achieved, desired) + self.healthy_reward - ctrl_cost)
-
         info = {
             "is_success": success,
             "ctrl_cost": ctrl_cost,
