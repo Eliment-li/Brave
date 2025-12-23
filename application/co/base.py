@@ -38,9 +38,9 @@ class CandidateLocalSearchEnv(gym.Env):
 
     def __init__(
         self,
-        k: int = 64,
-        max_steps: int = 200,
-        reward_mode: str = "delta",
+        k: int = None,
+        max_steps: int = None,
+        reward_mode: str = None,
         seed: Optional[int] = None,
     ):
         super().__init__()

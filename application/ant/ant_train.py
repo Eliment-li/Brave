@@ -41,9 +41,10 @@ class Args:
     track: bool = False
     r_wrapper_ver: int = -1 # 1 for AntBRSRewardWrapperV1, 2 for AntBRSRewardWrapperV2
     reward_mode:str = 'standerd' # 'brave' or 'standerd' or 'rnd' or....
+    reward_type:str = 'dense'
     swanlab_project: str = "Brave_Antv4_speed"
     swanlab_workspace: str = "Eliment-li"
-    swanlab_group: str = "td3_ant_standerd"
+    swanlab_group: str = "ant_speed"
     root_path: str = get_root_path()
     n_eval_episodes: int = 1
     model_dir: str = get_root_path()+"/results/checkpoints/Ant"
@@ -77,11 +78,15 @@ class Args:
             for tag in self.tags:
                 parsed_tags.extend([t.strip() for t in tag.split(',') if t.strip()])
             self.tags = parsed_tags
-            if self.reward_mode  == 'brave':
-                self.tags.append(f'warpperv{self.r_wrapper_ver}')
-            self.tags.append(self.reward_mode)
+        else:
+            self.tags=[]
+        if self.reward_mode == 'brave':
+            self.tags.append(f'warpperv{self.r_wrapper_ver}')
+        self.tags.append(self.reward_mode)
+        self.tags.append(self.reward_type)
         Path(self.model_dir).mkdir(parents=True, exist_ok=True)
         Path(self.video_dir).mkdir(parents=True, exist_ok=True)
+
 
 _WRAPPER_MAP = {
     1: AntBRSRewardWrapperV1,
@@ -133,7 +138,7 @@ def add_reward_wrapper(env, args):
 def train_and_evaluate():
     args_dict = asdict(args)
     def make_env():
-        env = gym.make(args.env_id, reward_type="sparse", target_speed=4.5)
+        env = gym.make(args.env_id, reward_type=args.reward_type, target_speed=4.5)
         env = OriginalRewardInfoWrapper(env)
         env = add_reward_wrapper(env, args)
         return env
