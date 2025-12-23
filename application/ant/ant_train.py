@@ -2,8 +2,11 @@ import time
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
 import os
+
+from stable_baselines3.common.env_util import make_vec_env
 from swanlab.env import is_windows
 
+from application.ant.ant_explors_wrapper import AntExploRSRewardWrapper, ExploRSConfig
 from application.ant.brs_wrapper.v1 import AntBRSRewardWrapperV1
 from application.ant.brs_wrapper.v2 import AntBRSRewardWrapperV2
 from application.ant.brs_wrapper.v3 import AntBRSRewardWrapperV3
@@ -40,15 +43,22 @@ class Args:
     seed: int = -1
     track: bool = False
     r_wrapper_ver: int = -1 # 1 for AntBRSRewardWrapperV1, 2 for AntBRSRewardWrapperV2
-    reward_mode:str = 'standerd' # 'brave' or 'standerd' or 'rnd' or....
+    reward_mode:str = 'ExploRS' # 'brave' or 'standerd' or 'rnd' or....
+    #ExploRS
+    #env
     reward_type:str = 'dense'
+    speed_target: float = 4.0
+    #swanlab
     swanlab_project: str = "Brave_Antv4_speed"
     swanlab_workspace: str = "Eliment-li"
-    swanlab_group: str = "ant_speed"
+    swanlab_group: str = ''
+
+    #path
     root_path: str = get_root_path()
     n_eval_episodes: int = 1
     model_dir: str = get_root_path()+"/results/checkpoints/Ant"
     video_dir: str = get_root_path()+"/results/videos/Ant"
+
     tags: list[str] = field(default_factory=list)
 
     # TD3 Hyperparameters
@@ -70,9 +80,12 @@ class Args:
         safe_env = self.env_id.replace("/", "_")
         self.experiment_name = safe_env + '_' + arrow.now().format('MMDD_HHmm')
         self.experiment_name += ('_'+self.reward_mode)
+        self.swanlab_group = self.reward_mode
+
         if self.seed == -1:
             self.reset_seed()
         print(f"Using seed: {self.seed}")
+
         if self.tags:
             parsed_tags = []
             for tag in self.tags:
@@ -130,6 +143,21 @@ def add_reward_wrapper(env, args):
         case 'rnd':
             from baseline.rnd import RNDRewardWrapper
             env = RNDRewardWrapper(env, beta=1.0)
+        case 'ExploRS':
+            env = AntExploRSRewardWrapper(
+                env,
+                config=ExploRSConfig(
+                    lmbd=1.0,
+                    max_bonus=1.0,
+                    explore_scale=1.0,
+                    exploit_scale=1.0,
+                    exploit_clip=1.0,
+                    bin_xy=0.5,
+                    bin_z=0.05,
+                    bin_v=0.5,
+                    use_mujoco_state=True,
+                ),
+            )
         case 'standerd':
             pass
 
@@ -137,14 +165,17 @@ def add_reward_wrapper(env, args):
 
 def train_and_evaluate():
     args_dict = asdict(args)
+    #set torch seed
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
     def make_env():
-        env = gym.make(args.env_id, reward_type=args.reward_type, target_speed=4.5)
+        env = gym.make(args.env_id, reward_type=args.reward_type, target_speed=args.speed_target)
         env = OriginalRewardInfoWrapper(env)
         env = add_reward_wrapper(env, args)
+        env.reset(seed=args.seed)
         return env
     # 创建训练环境
-    #env = make_vec_env(make_env, n_envs=1, seed=args.seed)
-    env = make_env()
+    env = make_vec_env(make_env, n_envs=1, seed=args.seed)
 
     # 配置 Action Noise
     n_actions = env.action_space.shape[-1]
@@ -196,7 +227,7 @@ def train_and_evaluate():
     save_model(model, str(model_path))
 
     def make_eval_env():
-        base_env = gym.make(args.env_id, render_mode="rgb_array")
+        base_env = gym.make(args.env_id, render_mode="rgb_array", reward_type=args.reward_type, target_speed=args.speed_target)
         base_env = OriginalRewardInfoWrapper(base_env)
         base_env = add_reward_wrapper(base_env, args)
         video_env = RecordVideo(
