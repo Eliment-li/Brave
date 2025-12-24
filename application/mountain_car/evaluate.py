@@ -5,14 +5,14 @@ import gymnasium as gym
 from gymnasium.wrappers import RecordEpisodeStatistics, RecordVideo
 from pathlib import Path
 
-from application.mountain_car.dqn_mountain_car import QNetwork, ProcessObsInputEnv
+from bak.dqn_mountain_car import QNetwork, ProcessObsInputEnv
 from configs.dqn_args import DqnArgs
 
 
 def make_eval_env(args: DqnArgs, video_dir: str | None = None):
     env = ProcessObsInputEnv(gym.make(args.env_id, render_mode="rgb_array"))
     if args.enable_brave:
-        from application.mountain_car.brs_mountaincar_wrapper import BRSRewardWrapper
+        from bak.ppo.brs_mountaincar_wrapper import BRSRewardWrapper
         env = BRSRewardWrapper(env)
     env = RecordEpisodeStatistics(env)
     if video_dir is not None:
