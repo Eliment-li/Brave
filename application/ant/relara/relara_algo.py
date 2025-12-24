@@ -16,9 +16,11 @@ import os
 import random
 import time
 from dataclasses import dataclass
+from collections import deque
 
 import gymnasium as gym
 import numpy as np
+import swanlab
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -66,6 +68,8 @@ class ReLaraConfig:
     save_frequency: int = 100000
     save_folder: str = "./results/relara/"
 
+    track: bool = False
+
 
 class ReLaraAlgo:
     """
@@ -111,14 +115,14 @@ class ReLaraAlgo:
         self.gamma = float(cfg.gamma)
 
         # tensorboard
-        run_name = "{}-{}-{}-{}".format(
-            cfg.exp_name,
-            getattr(env.unwrapped, "spec", None).id if getattr(env.unwrapped, "spec", None) else "AntTask",
-            self.seed,
-            datetime.datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d-%H-%M-%S"),
-        )
-        os.makedirs("./runs/", exist_ok=True)
-        self.writer = SummaryWriter(os.path.join("./runs/", run_name))
+        # run_name = "{}-{}-{}-{}".format(
+        #     cfg.exp_name,
+        #     getattr(env.unwrapped, "spec", None).id if getattr(env.unwrapped, "spec", None) else "AntTask",
+        #     self.seed,
+        #     datetime.datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d-%H-%M-%S"),
+        # )
+        # os.makedirs("./runs/", exist_ok=True)
+        #self.writer = SummaryWriter(os.path.join("./runs/", run_name))
 
         self.write_frequency = int(cfg.write_frequency)
         self.save_folder = str(cfg.save_folder)
@@ -202,6 +206,13 @@ class ReLaraAlgo:
         self.ra_policy_frequency = int(cfg.ra_policy_frequency)
         self.ra_target_frequency = int(cfg.ra_target_frequency)
         self.ra_tau = float(cfg.ra_tau)
+        self.success_buffer: deque[float] = deque(maxlen=100)
+
+        if cfg.track:
+            swanlab.init(project="Brave_Antv4_speed",
+                         swanlab_workspace="Eliment-li",
+                         name=cfg.exp_name,
+                         config=cfg)
 
     def learn(self, total_timesteps: int = int(1e6), pa_learning_starts: int = int(1e4), ra_learning_starts: int = int(5e3)):
         obs, _info = self.env.reset(seed=self.seed)
@@ -216,13 +227,28 @@ class ReLaraAlgo:
 
             # sample / propose reward
             if global_step < int(ra_learning_starts):
+                #random sample, haven't use RA network yet
                 reward_pro = self.proposed_reward_space.sample()
             else:
+                #use RA network to propose reward
                 reward_pro, _, _ = self.ra_actor.get_action(torch.tensor(np.expand_dims(obs_ra, axis=0)).to(self.device))
+                #change tensor value to numpy
                 reward_pro = reward_pro.detach().cpu().numpy()[0]
 
             next_obs, reward_env, terminated, truncated, info = self.env.step(action)
             done = bool(terminated or truncated)
+            #log
+            swanlab.log(
+                {
+                    "standerd_reward": reward_env,
+                    "reward_pro": reward_pro,
+                    "speed": info.get("speed", 0.0),
+                    "height": info.get("height", 0.0),
+                    "stand": info.get("stand", 0.0),
+                },
+                step=global_step,
+            )
+
 
             # PA stores env reward only
             self.pa_replay_buffer.add(obs, next_obs, action, reward_env, done, info)
@@ -230,11 +256,24 @@ class ReLaraAlgo:
             if not done:
                 obs = next_obs
             else:
+                # 记录 rollout 成功率
+                success = self._extract_success(info)
+                if success is not None:
+                    self.success_buffer.append(success)
+                    success_rate = float(np.mean(self.success_buffer))
+                    swanlab.log({"rollout/success_rate": success_rate}, step=global_step)
                 # episode stats expected from RecordEpisodeStatistics
                 if isinstance(info, dict) and "episode" in info:
-                    self.writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                    self.writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
-                    print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+                    # self.writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
+                    # self.writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+                    # print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+                    swanlab.log(
+                        {
+                            "charts/episodic_return": info["episode"]["r"],
+                            "charts/episodic_length": info["episode"]["l"],
+                        },
+                        step=global_step,
+                    )
                 obs, _ = self.env.reset()
 
             # next action from PA
@@ -259,7 +298,9 @@ class ReLaraAlgo:
                 self.save(indicator=f"{global_step // 1000}k")
 
         self.env.close()
-        self.writer.close()
+        if self.cfg.track:
+            swanlab.finish()
+        #self.writer.close()
 
     def optimize_pa(self, global_step: int):
         data = self.pa_replay_buffer.sample(self.pa_batch_size)
@@ -315,16 +356,16 @@ class ReLaraAlgo:
             for param, target_param in zip(self.pa_qf_2.parameters(), self.pa_qf_2_target.parameters()):
                 target_param.data.copy_(self.pa_tau * param.data + (1 - self.pa_tau) * target_param.data)
 
-        if global_step % self.write_frequency == 0:
-            self.writer.add_scalar("losses/pa_qf_1_values", qf_1_a_values.mean().item(), global_step)
-            self.writer.add_scalar("losses/pa_qf_2_values", qf_2_a_values.mean().item(), global_step)
-            self.writer.add_scalar("losses/pa_qf_1_loss", qf_1_loss.item(), global_step)
-            self.writer.add_scalar("losses/pa_qf_2_loss", qf_2_loss.item(), global_step)
-            self.writer.add_scalar("losses/pa_qf_loss", qf_loss.item() / 2.0, global_step)
-            self.writer.add_scalar("losses/pa_actor_loss", actor_loss.item(), global_step)
-            self.writer.add_scalar("losses/pa_alpha", float(self.pa_alpha), global_step)
-            if self.pa_alpha_autotune:
-                self.writer.add_scalar("losses/pa_alpha_loss", alpha_loss.item(), global_step)
+        # if global_step % self.write_frequency == 0:
+        #     self.writer.add_scalar("losses/pa_qf_1_values", qf_1_a_values.mean().item(), global_step)
+        #     self.writer.add_scalar("losses/pa_qf_2_values", qf_2_a_values.mean().item(), global_step)
+        #     self.writer.add_scalar("losses/pa_qf_1_loss", qf_1_loss.item(), global_step)
+        #     self.writer.add_scalar("losses/pa_qf_2_loss", qf_2_loss.item(), global_step)
+        #     self.writer.add_scalar("losses/pa_qf_loss", qf_loss.item() / 2.0, global_step)
+        #     self.writer.add_scalar("losses/pa_actor_loss", actor_loss.item(), global_step)
+        #     self.writer.add_scalar("losses/pa_alpha", float(self.pa_alpha), global_step)
+        #     if self.pa_alpha_autotune:
+        #         self.writer.add_scalar("losses/pa_alpha_loss", alpha_loss.item(), global_step)
 
     def optimize_ra(self, global_step: int):
         data = self.ra_replay_buffer.sample(self.ra_batch_size)
@@ -374,16 +415,16 @@ class ReLaraAlgo:
             for param, target_param in zip(self.ra_qf_2.parameters(), self.ra_qf_2_target.parameters()):
                 target_param.data.copy_(self.ra_tau * param.data + (1 - self.ra_tau) * target_param.data)
 
-        if global_step % self.write_frequency == 0:
-            self.writer.add_scalar("losses/ra_qf_1_values", qf_1_a_values.mean().item(), global_step)
-            self.writer.add_scalar("losses/ra_qf_2_values", qf_2_a_values.mean().item(), global_step)
-            self.writer.add_scalar("losses/ra_qf_1_loss", qf_1_loss.item(), global_step)
-            self.writer.add_scalar("losses/ra_qf_2_loss", qf_2_loss.item(), global_step)
-            self.writer.add_scalar("losses/ra_qf_loss", qf_loss.item() / 2.0, global_step)
-            self.writer.add_scalar("losses/ra_actor_loss", actor_loss.item(), global_step)
-            self.writer.add_scalar("losses/ra_alpha", float(self.ra_alpha), global_step)
-            if self.ra_alpha_autotune:
-                self.writer.add_scalar("losses/ra_alpha_loss", alpha_loss.item(), global_step)
+        # if global_step % self.write_frequency == 0:
+        #     self.writer.add_scalar("losses/ra_qf_1_values", qf_1_a_values.mean().item(), global_step)
+        #     self.writer.add_scalar("losses/ra_qf_2_values", qf_2_a_values.mean().item(), global_step)
+        #     self.writer.add_scalar("losses/ra_qf_1_loss", qf_1_loss.item(), global_step)
+        #     self.writer.add_scalar("losses/ra_qf_2_loss", qf_2_loss.item(), global_step)
+        #     self.writer.add_scalar("losses/ra_qf_loss", qf_loss.item() / 2.0, global_step)
+        #     self.writer.add_scalar("losses/ra_actor_loss", actor_loss.item(), global_step)
+        #     self.writer.add_scalar("losses/ra_alpha", float(self.ra_alpha), global_step)
+        #     if self.ra_alpha_autotune:
+        #         self.writer.add_scalar("losses/ra_alpha_loss", alpha_loss.item(), global_step)
 
     def save(self, indicator: str = "final"):
         torch.save(
@@ -394,3 +435,18 @@ class ReLaraAlgo:
             self.ra_actor.state_dict(),
             os.path.join(self.save_folder, f"ra-actor-{self.cfg.exp_name}-{indicator}-{self.seed}.pth"),
         )
+
+    def _extract_success(self, info):
+        if not isinstance(info, dict):
+            return None
+        for key in ("success", "is_success", "goal_achieved"):
+            val = info.get(key)
+            if isinstance(val, (bool, int, float)):
+                return float(val)
+        episode_info = info.get("episode")
+        if isinstance(episode_info, dict):
+            for key in ("success", "is_success"):
+                val = episode_info.get(key)
+                if isinstance(val, (bool, int, float)):
+                    return float(val)
+        return None

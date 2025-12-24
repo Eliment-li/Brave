@@ -7,6 +7,7 @@ import torch
 import tyro
 
 import application.ant.ant_tasks  # ensure env registration
+from application.ant.ant_info_wrapper import OriginalRewardInfoWrapper
 
 from application.ant.relara.relara_env_maker import make_ant_relara_env
 from application.ant.relara.relara_algo import ReLaraAlgo, ReLaraConfig
@@ -17,9 +18,9 @@ from configs.base_args import get_root_path
 @dataclass
 class Args:
     env_id: str = "AntSpeed-v0"
-    total_timesteps: int = int(1e5)
+    total_timesteps: int = int(800000)
     seed: int = -1
-
+    track: bool = False
     # task config
     reward_type: str = "dense"
     speed_target: float = 4.0
@@ -67,6 +68,7 @@ def main(args: Args):
         target_dist=args.dist_target ,
         transform_sparse_reward=args.transform_sparse_reward,
     )
+    env = OriginalRewardInfoWrapper(env)
 
     cfg = ReLaraConfig(
         exp_name=args.experiment_name,
@@ -76,6 +78,7 @@ def main(args: Args):
         beta=args.beta,
         save_folder=str(Path(args.save_dir) / args.experiment_name),
         save_frequency=10000,
+        track=args.track,
     )
 
     agent = ReLaraAlgo(
@@ -98,4 +101,5 @@ def main(args: Args):
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
+    args.track=True
     main(args)
