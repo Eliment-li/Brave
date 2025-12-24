@@ -21,6 +21,7 @@ import torch.optim as optim
 from stable_baselines3 import TD3
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.monitor import Monitor
 
 from application.ant.ant_info_wrapper import OriginalRewardInfoWrapper
 from configs.base_args import get_root_path
@@ -178,6 +179,7 @@ def train_and_evaluate():
                        )
         env = OriginalRewardInfoWrapper(env)
         env = add_reward_wrapper(env, args)
+        env = Monitor(env, filename=None, allow_early_resets=True)
         env.reset(seed=args.seed)
         return env
     # 创建训练环境

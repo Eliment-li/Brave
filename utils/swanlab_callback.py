@@ -152,26 +152,44 @@ class SwanLabCallback(BaseCallback):
         infos = self.locals.get("infos", None)
         dones = self.locals.get("dones", None)
 
-        extra_keys =['standerd_reward',
-                     'rdcr',
-                      'rdcr_max',
-                     'brs_bonus',
-                      'episode_max_metric','stand','speed','height'
-                     'stander_episode_reward_mean',
-                     r'original/ep_rew_mean']
+        extra_keys =[
+            'standerd_reward',
+            'rdcr',
+            'rdcr_max',
+            'brs_bonus',
+            'episode_max_metric','stand','speed','height'
+            'stander_episode_reward_mean',
+            r'original/ep_rew_mean',
+            r'charts/episodic_return',
+            r'charts/episodic_length',
+        ]
 
         if dones[0]:
             extra_keys.append('stander_episode_reward_mean')
 
         if infos:
-            # SB3 的时间步
             step = int(self.num_timesteps)
+            episode_logs = []
+            for info in infos:
+                if not isinstance(info, dict):
+                    continue
+                episode = info.get("episode")
+                if isinstance(episode, dict):
+                    payload = {}
+                    if "r" in episode:
+                        payload["charts/episodic_return"] = episode["r"]
+                    if "l" in episode:
+                        payload["charts/episodic_length"] = episode["l"]
+                    if payload:
+                        episode_logs.append(payload)
+            for payload in episode_logs:
+                self.experiment.log(payload, step=step)
             # 合并/过滤每个 env 的 info
             aggregated: Dict[str, float] = {}
             for info in infos:
                 if not isinstance(info, dict):
                     continue
-                for k in extra_keys:  # 添加 stander_episode_reward
+                for k in extra_keys:
                     v = info.get(k, None)
                     if isinstance(v, numbers.Number):
                         # 多环境简单做平均
