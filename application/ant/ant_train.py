@@ -47,7 +47,9 @@ class Args:
     #ExploRS
     #env
     reward_type:str = 'dense'
-    speed_target: float = 4.0
+    target_speed: float = 4.0
+    target_height:float = 0.9
+    target_dist:float = 4.0
     #swanlab
     swanlab_project: str = "Brave_Antv4_speed"
     swanlab_workspace: str = "Eliment-li"
@@ -169,7 +171,11 @@ def train_and_evaluate():
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     def make_env():
-        env = gym.make(args.env_id, reward_type=args.reward_type, target_speed=args.speed_target)
+        env = gym.make(args.env_id, reward_type=args.reward_type,
+                       target_speed=args.target_speed,
+                        target_dist = args.target_dist,
+                       target_height = args.target_height
+                       )
         env = OriginalRewardInfoWrapper(env)
         env = add_reward_wrapper(env, args)
         env.reset(seed=args.seed)
