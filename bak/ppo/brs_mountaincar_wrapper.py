@@ -75,7 +75,6 @@ class BRSRewardWrapper(gym.Wrapper):
         return obs, reward, terminated, truncated, info
 
 
-
     def reward_function(self):
         # 原始 MountainCar 的 reward 是 -1 每步；我们这里不用它，改用 cost-aware r_t
         pos,vel = self._get_state()
