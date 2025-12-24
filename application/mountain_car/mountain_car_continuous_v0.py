@@ -13,6 +13,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
 
+from application.mountain_car.mountain_car_info_wrapper import MountainCarRewardStatsWrapper
 from configs.base_args import get_root_path
 import swanlab
 
@@ -21,6 +22,8 @@ from utils.swanlab_callback import SwanLabCallback
 from utils.plot.plot_lines import plot_lines
 import tyro
 import os
+import json
+import matplotlib.pyplot as plt
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 #batch_size 必须整除 n_steps × n_envs（对 PPO/A2C 等），否则会报错或被内部调整。
 @dataclass
@@ -88,7 +91,7 @@ class BRSRewardWrapperV1(gym.Wrapper):
                 self.min_cost = self.cost
                 print(f'self.min_cost ={self.min_cost}')
             elif self.cost < self.min_cost:
-                reward=40
+                reward=80
                 self.min_cost = self.cost
                 print(f'self.min_cost ={self.min_cost}')
         self.num_steps += 1
@@ -262,6 +265,7 @@ def train_and_evaluate():
         env = gym.make(args.env_id)
         if args.enable_brave:
             env = BRSRewardWrapperV1(env)
+        env = MountainCarRewardStatsWrapper(env)
         return env
 
     # tuned hyperparams from official stable-baselines3 https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/ppo.yml
@@ -305,6 +309,38 @@ def train_and_evaluate():
         )
     else:
         model.learn(total_timesteps=args.total_timesteps)
+    #plot reward stats
+    try:
+        stats_list = env.env_method("stats_dict")
+        if stats_list:
+            reward_stats = stats_list[0]
+            rewards_by_bin = reward_stats["rewards_by_bin"]
+            bin_size = reward_stats["bin_size"]
+            x_min = reward_stats["x_min"]
+            x_max = reward_stats["x_max"]
+
+            x_centers, avg_rewards = [], []
+            for idx, rewards in enumerate(rewards_by_bin):
+                if not rewards:
+                    continue
+                x_center = min(x_min + (idx + 0.5) * bin_size, x_max)
+                x_centers.append(x_center)
+                avg_rewards.append(float(np.mean(rewards)))
+
+            if avg_rewards:
+                stats_plot_path = Path(args.model_dir) / f"{args.experiment_name}_reward_stats.png"
+                plt.figure(figsize=(10, 4))
+                plt.plot(x_centers, avg_rewards, label="Avg reward by x")
+                plt.xlabel("Position (x)")
+                plt.ylabel("Average reward")
+                plt.title("MountainCar Reward Mean vs Position")
+                plt.legend()
+                plt.tight_layout()
+                plt.savefig(stats_plot_path)
+                plt.close()
+                print(f"Reward stats plot saved to: {stats_plot_path}")
+    except AttributeError:
+        pass
     # 保存模型
     model_path = Path(args.model_dir) / f"{args.experiment_name}_seed{args.seed}.zip"
     save_model(model, str(model_path))
@@ -382,4 +418,4 @@ if __name__ == "__main__":
         args.n_steps = 8  # ensure batch_size divides n_steps * n_envs
         train_and_evaluate()
         args.reset_seed()
-        time.sleep(30)
+        #time.sleep(30)
