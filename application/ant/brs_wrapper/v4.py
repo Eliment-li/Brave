@@ -47,9 +47,9 @@ class AntBRSRewardWrapperV4(gym.Wrapper):
             reward = bonus
             self.rdcr = self.gamma * self.rdcr + bonus
             assert self.rdcr > self.rdcr_max, f"rdcr did not increase: {self.rdcr} <= {self.rdcr_max}"
-            self.rdcr_max = self.rdcr
         else:
             self.rdcr = self.gamma * self.rdcr + reward
+        self.rdcr_max = max(self.rdcr_max, self.rdcr)
 
         info = dict(info or {})
         info["brs_bonus"] = bonus

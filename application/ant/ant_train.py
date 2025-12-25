@@ -88,7 +88,7 @@ class Args:
 
         }
         self.env_id = task_map.get(self.task)
-        self.swanlab_project+=self.task
+        self.swanlab_project=self.swanlab_project+'_'+self.task
 
         safe_env = self.env_id.replace("/", "_")
         self.experiment_name = safe_env + '_' + arrow.now().format('MMDD_HHmm')
@@ -283,6 +283,9 @@ def train_and_evaluate():
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
+    args.task='stand'
+    args.reward_mode='brave'
+    args.r_wrapper_ver=4
     args.finalize()
     for i in range(args.repeat):
         train_and_evaluate()
