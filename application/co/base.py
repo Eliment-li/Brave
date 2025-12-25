@@ -49,6 +49,7 @@ class CandidateLocalSearchEnv(gym.Env):
         self.k = int(k)
         self.max_steps = int(max_steps)
         self.reward_mode = reward_mode
+        self.potential_gamma = 1.0
 
         self._rng = np.random.default_rng(seed)
 
@@ -144,7 +145,7 @@ class CandidateLocalSearchEnv(gym.Env):
             denom = max(1e-9, abs(best_before))
             return -delta / denom
 
-        if self.reward_mode == "brs":
+        if self.reward_mode == "brave":
             # Simple record-triggered bonus (lightweight version aligned with your paper's intent).
             # Reward = -delta, but if we set a new best, add a bonus proportional to improvement.
             base = -delta
@@ -153,6 +154,13 @@ class CandidateLocalSearchEnv(gym.Env):
                 bonus = 1.0 + improvement / max(1e-9, abs(best_before))
                 return base + bonus
             return base
+
+        if self.reward_mode == "potential":
+            gamma = getattr(self, "potential_gamma", 1.0)
+            base = -delta
+            phi_before = -best_before
+            phi_after = -best_after
+            return base + gamma * phi_after - phi_before
 
         raise ValueError(f"Unknown reward_mode: {self.reward_mode}")
 

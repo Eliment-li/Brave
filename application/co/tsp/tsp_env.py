@@ -22,7 +22,7 @@ class TSP2OptEnv(CandidateLocalSearchEnv):
         n: int = 100,
         k: int = 64,
         max_steps: int = 200,
-        reward_mode: str = "delta",
+        reward_mode: str = "",
         seed: Optional[int] = None,
     ):
         self.n = int(n)

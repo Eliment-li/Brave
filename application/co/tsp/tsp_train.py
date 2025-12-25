@@ -47,7 +47,7 @@ class TrainArgs:
     n: int = 100
     k: int = 16
     max_steps: int = 200
-    reward_mode: Literal["delta", "terminal", "improve_only", "normalized_delta", "brs"] = "delta"
+    reward_mode: Literal["delta", "terminal", "improve_only", "normalized_delta", "brave", "potential"] = "delta"
     total_timesteps: int = 200_00
     repeat: int = 1
     seed: int = -1
@@ -134,4 +134,3 @@ if __name__ == "__main__":
         main(args)
         args.reset_seed()
         time.sleep(10)
-
