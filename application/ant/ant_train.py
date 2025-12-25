@@ -38,13 +38,14 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 @dataclass
 class Args:
-    env_id: str = "AntSpeed-v0"
+    task:str = '',#speed far stand
+    env_id: str = "AntStand-v0"
     total_timesteps: int = int(1e4)
     repeat: int = 1
     seed: int = -1
     track: bool = False
     r_wrapper_ver: int = -1 # 1 for AntBRSRewardWrapperV1, 2 for AntBRSRewardWrapperV2
-    reward_mode:str = 'ExploRS' # 'brave' or 'standerd' or 'rnd' or....
+    reward_mode:str = 'standerd' # 'brave' or 'standerd' or 'rnd' or....
     #ExploRS
     #env
     reward_type:str = 'dense'
@@ -52,7 +53,7 @@ class Args:
     target_height:float = 0.9
     target_dist:float = 4.0
     #swanlab
-    swanlab_project: str = "Brave_Antv4_speed"
+    swanlab_project: str = "Brave_Antv4"#final project name = swanlab_project+task
     swanlab_workspace: str = "Eliment-li"
     swanlab_group: str = ''
 
@@ -80,6 +81,15 @@ class Args:
         self.seed = torch.randint(0, 10000, (1,)).item()
 
     def finalize(self):
+        task_map = {
+            'stand':"AntStand-v0",
+            'far': 'AntFar-v0',
+            'speed':"AntSpeed-v0"
+
+        }
+        self.env_id = task_map.get(self.task)
+        self.swanlab_project+=self.task
+
         safe_env = self.env_id.replace("/", "_")
         self.experiment_name = safe_env + '_' + arrow.now().format('MMDD_HHmm')
         self.experiment_name += ('_'+self.reward_mode)
@@ -89,13 +99,15 @@ class Args:
             self.reset_seed()
         print(f"Using seed: {self.seed}")
 
+        self.append_tags()
+    def append_tags(self):
         if self.tags:
             parsed_tags = []
             for tag in self.tags:
                 parsed_tags.extend([t.strip() for t in tag.split(',') if t.strip()])
             self.tags = parsed_tags
         else:
-            self.tags=[]
+            self.tags = []
         if self.reward_mode == 'brave':
             self.tags.append(f'warpperv{self.r_wrapper_ver}')
         self.tags.append(self.reward_mode)
@@ -235,7 +247,10 @@ def train_and_evaluate():
     save_model(model, str(model_path))
 
     def make_eval_env():
-        base_env = gym.make(args.env_id, render_mode="rgb_array", reward_type=args.reward_type, target_speed=args.speed_target)
+        base_env = gym.make(args.env_id, render_mode="rgb_array", reward_type=args.reward_type,
+                            target_speed=args.target_speed,
+                            target_dist=args.target_dist,
+                            target_height=args.target_height)
         base_env = OriginalRewardInfoWrapper(base_env)
         base_env = add_reward_wrapper(base_env, args)
         video_env = RecordVideo(
