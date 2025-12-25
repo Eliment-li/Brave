@@ -147,6 +147,15 @@ class SwanLabCallback(BaseCallback):
             print('swanlab update config')
             self._run.config.update(config)
 
+    def get_lr(self):
+        opt = getattr(self.model.policy, "optimizer", None)
+        if opt is not None and getattr(opt, "param_groups", None):
+            lr = opt.param_groups[0].get("lr", None)
+            if lr is not None:
+                return {"train/learning_rate", float(lr)}
+            else:
+                return None
+
     def _on_step(self) -> bool:
         # 从 rollout 的 locals 拿到 infos（VecEnv: List[Dict]）
         infos = self.locals.get("infos", None)
@@ -162,6 +171,7 @@ class SwanLabCallback(BaseCallback):
             r'original/ep_rew_mean',
             r'charts/episodic_return',
             r'charts/episodic_length',
+            'cost','best_cost','delta','improved'
         ]
 
         if dones[0]:
@@ -198,6 +208,7 @@ class SwanLabCallback(BaseCallback):
                 n_envs = len(infos)
                 for k in aggregated:
                     aggregated[k] /= max(1, n_envs)
+                #aggregated.update(self.get_lr() or {})
                 # 上报到 SwanLab
                 self.experiment.log(aggregated, step=step)
         return True
