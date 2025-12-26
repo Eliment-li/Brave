@@ -44,7 +44,7 @@ class Args:
     save_dir: str = get_root_path() + "/results/relara_checkpoints/Ant"
     tags: list[str] = field(default_factory=list)
 
-    swanlab_project:str=''
+    swanlab_project: str = "Brave_Antv4"  # final project name = swanlab_project+task
     repeat:int = 1
 
     def reset_seed(self):
@@ -58,7 +58,7 @@ class Args:
 
         }
         self.env_id = task_map.get(self.task)
-        self.swanlab_project = self.env_id + '_' + self.task
+        self.swanlab_project = self.swanlab_project + '_' + self.task
         if self.seed == -1:
             self.reset_seed()
         self.experiment_name = self.env_id.replace("/", "_") + "_" + arrow.now().format("MMDD_HHmm") + "_relara"
