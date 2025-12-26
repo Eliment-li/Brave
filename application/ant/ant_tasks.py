@@ -5,6 +5,7 @@ from gymnasium import spaces, utils
 from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.envs.registration import register
 
+from utils.calc_util import SlideWindow
 
 DEFAULT_CAMERA_CONFIG = {"distance": 4.0}
 
@@ -100,6 +101,9 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         )
         print(f"AntTaskEnv initialized with task={self.task}, reward_type={self.reward_type}")
 
+        self.slide_windows = SlideWindow(size=10)
+        self.success_cnt=0
+
     # ----------------- helpers -----------------
     @property
     def is_healthy(self) -> bool:
@@ -180,7 +184,10 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         truncated = False  # handled by TimeLimit wrapper / max_episode_steps in registration
 
         achieved, desired = obs["achieved_goal"], obs["desired_goal"]
-        success = self._is_success(achieved, desired)
+        self.slide_windows.next(achieved)
+
+        #success = self._is_success(achieved, desired)
+        success = self._is_success(self.slide_windows.average, desired)
 
         ctrl_cost = self.control_cost(action)
 
@@ -199,8 +206,10 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         }
         # obs = obs['observation']
         if success:
-            terminated = True
-            truncated = True
+            self.success_cnt +=1
+            if self.success_cnt>=10:
+                terminated = True
+                truncated = True
         return obs, reward, terminated, truncated, info
 
     def reset_model(self):

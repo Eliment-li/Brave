@@ -283,9 +283,9 @@ def train_and_evaluate():
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
-    # args.task='stand'
-    # args.reward_mode='brave'
-    # args.r_wrapper_ver=4
+    args.task='stand'
+    args.reward_mode='brave'
+    args.r_wrapper_ver=4
     args.finalize()
     for i in range(args.repeat):
         train_and_evaluate()
