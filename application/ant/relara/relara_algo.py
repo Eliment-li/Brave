@@ -208,12 +208,6 @@ class ReLaraAlgo:
         self.ra_tau = float(cfg.ra_tau)
         self.success_buffer: deque[float] = deque(maxlen=100)
 
-        if cfg.track:
-            swanlab.init(project="Brave_Antv4_speed",
-                         swanlab_workspace="Eliment-li",
-                         name=cfg.exp_name,
-                         config=cfg)
-
     def learn(self, total_timesteps: int = int(1e6), pa_learning_starts: int = int(1e4), ra_learning_starts: int = int(5e3)):
         obs, _info = self.env.reset(seed=self.seed)
 

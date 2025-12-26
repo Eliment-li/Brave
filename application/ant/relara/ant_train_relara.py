@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import arrow
 import numpy as np
+import swanlab
 import torch
 import tyro
 
@@ -17,10 +18,11 @@ from configs.base_args import get_root_path
 
 @dataclass
 class Args:
-    env_id: str = "AntSpeed-v0"
-    total_timesteps: int = int(800000)
+    env_id: str = ""#AntSpeed-v0, AntFar-v0, AntStand-v0
+    total_timesteps: int = int(100_0000)
     seed: int = -1
     track: bool = False
+    task: str = ""  # speed, far, stand
     # task config
     reward_type: str = "dense"
     speed_target: float = 4.0
@@ -40,13 +42,23 @@ class Args:
     # output
     root_path: str = get_root_path()
     save_dir: str = get_root_path() + "/results/relara_checkpoints/Ant"
-
     tags: list[str] = field(default_factory=list)
+
+    swanlab_project:str=''
+    repeat:int = 1
 
     def reset_seed(self):
         self.seed = torch.randint(0, 10000, (1,)).item()
 
     def finalize(self):
+        task_map = {
+            'stand': "AntStand-v0",
+            'far': 'AntFar-v0',
+            'speed': "AntSpeed-v0"
+
+        }
+        self.env_id = task_map.get(self.task)
+        self.swanlab_project = self.env_id + '_' + self.task
         if self.seed == -1:
             self.reset_seed()
         self.experiment_name = self.env_id.replace("/", "_") + "_" + arrow.now().format("MMDD_HHmm") + "_relara"
@@ -54,11 +66,8 @@ class Args:
 
 
 def main(args: Args):
-    args.finalize()
-
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
-
     env = make_ant_relara_env(
         args.env_id,
         seed=args.seed,
@@ -81,6 +90,12 @@ def main(args: Args):
         track=args.track,
     )
 
+    if args.track:
+        swanlab.init(project=args.swanlab_project,
+                     swanlab_workspace="Eliment-li",
+                     name=args.experiment_name,
+                     config=vars(args))
+
     agent = ReLaraAlgo(
         env=env,
         pa_actor_class=BasicActor,
@@ -101,5 +116,8 @@ def main(args: Args):
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
-    args.track=True
-    main(args)
+    args.finalize()
+    for i in range(args.repeat):
+        args.reset_seed()
+        main(args)
+        time.sleep(60)
