@@ -39,7 +39,7 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 @dataclass
 class Args:
     task:str = '',#speed far stand
-    env_id: str = "AntStand-v0"
+    env_id: str = ""#AntStand-v0, AntSpeed-v0, AntFar-v0
     total_timesteps: int = int(1e4)
     repeat: int = 1
     seed: int = -1
@@ -283,9 +283,9 @@ def train_and_evaluate():
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
-    args.task='stand'
-    args.reward_mode='brave'
-    args.r_wrapper_ver=4
+    # args.task='stand'
+    # args.reward_mode='brave'
+    # args.r_wrapper_ver=4
     args.finalize()
     for i in range(args.repeat):
         train_and_evaluate()

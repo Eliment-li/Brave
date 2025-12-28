@@ -206,10 +206,10 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         }
         # obs = obs['observation']
         if success:
-            self.success_cnt +=1
-            if self.success_cnt>=10:
-                terminated = True
-                truncated = True
+            # self.success_cnt +=1
+            # if self.success_cnt>=10:
+            terminated = True
+            truncated = True
         return obs, reward, terminated, truncated, info
 
     def reset_model(self):
