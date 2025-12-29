@@ -51,7 +51,7 @@ class TrainArgs:
     total_timesteps: int = 200_00
     repeat: int = 1
     seed: int = -1
-    track: bool = True
+    track: bool = False
     swanlab_project: str = "Brave_tsp"
     swanlab_workspace: str = "Eliment-li"
     swanlab_group: str = env_id
@@ -69,6 +69,7 @@ class TrainArgs:
         if self.seed == -1:
             self.reset_seed()
         print(f"Using seed: {self.seed}")
+        print(f"reward_mode: {self.reward_mode}")
         if self.tags:
             parsed_tags = []
             for tag in self.tags:

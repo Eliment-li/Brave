@@ -60,6 +60,9 @@ class CandidateLocalSearchEnv(gym.Env):
         self._step = 0
         self._cost = np.inf
         self._best_cost = np.inf
+        self.rdcr = 0.0
+        self.rdcr_max = 0.0
+        self.gamma = 0.99
 
     # --- Gymnasium API ---
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
@@ -70,10 +73,17 @@ class CandidateLocalSearchEnv(gym.Env):
         self._step = 0
         self._reset_instance(options=options or {})
         self._cost = float(self._current_cost())
-        self._best_cost = float(self._cost)
+        if self._best_cost == np.inf:
+            self._best_cost = float(self._cost)
 
         obs = self._get_obs()
-        info = {"cost": self._cost, "best_cost": self._best_cost}
+        info = {"cost": self._cost,
+                "best_cost": self._best_cost,
+                "rdcr": 0.0,
+                "rdcr_max": 0.0
+                }
+        self.rdcr = 0.0
+        self.rdcr_max = 0.0
         return obs, info
 
     def step(self, action: int):
@@ -98,6 +108,12 @@ class CandidateLocalSearchEnv(gym.Env):
         terminated = False
         truncated = self._step >= self.max_steps
 
+        info = {
+            "cost": cost_after,
+            "best_cost": self._best_cost,
+            "delta": delta,
+            "improved": improved,
+        }
         reward = float(
             self._compute_reward(
                 cost_before=cost_before,
@@ -107,16 +123,12 @@ class CandidateLocalSearchEnv(gym.Env):
                 delta=delta,
                 step=self._step,
                 done=terminated or truncated,
+                info=info,
             )
         )
 
         obs = self._get_obs()
-        info = {
-            "cost": cost_after,
-            "best_cost": self._best_cost,
-            "delta": delta,
-            "improved": improved,
-        }
+
         return obs, reward, terminated, truncated, info
 
     # --- Reward shaping ---
@@ -130,6 +142,7 @@ class CandidateLocalSearchEnv(gym.Env):
         delta: float,
         step: int,
         done: bool,
+        info: Dict[str, Any],
     ) -> float:
         # Minimization convention: lower cost is better.
         if self.reward_mode == "delta":
@@ -146,14 +159,23 @@ class CandidateLocalSearchEnv(gym.Env):
             return -delta / denom
 
         if self.reward_mode == "brave":
-            # Simple record-triggered bonus (lightweight version aligned with your paper's intent).
             # Reward = -delta, but if we set a new best, add a bonus proportional to improvement.
             base = -delta
+            bonus = 0.0
             if best_after < best_before:
-                improvement = best_before - best_after
-                bonus = 1.0 + improvement / max(1e-9, abs(best_before))
-                return base + bonus
-            return base
+                # improvement = best_before - best_after
+                # bonus = 1.0 + improvement / max(1e-9, abs(best_before))
+                bonus = 1.000001 * (self.rdcr_max - self.gamma * self.rdcr) + 0.5
+                self.rdcr = self.gamma * self.rdcr + bonus
+                assert self.rdcr > self.rdcr_max, f"rdcr did not increase: {self.rdcr} <= {self.rdcr_max}"
+                return  bonus
+            else:
+                self.rdcr = self.gamma * self.rdcr + base
+                return base
+            info["brs_bonus"] = bonus
+            info["rdcr"] = self.rdcr
+            info["rdcr_max"] = self.rdcr_max
+
 
         if self.reward_mode == "potential":
             gamma = getattr(self, "potential_gamma", 1.0)
