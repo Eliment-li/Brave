@@ -134,18 +134,27 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
             self.target_dist = float(self.np_random.uniform(1.0, 8.0))
 
     def _desired_goal(self) -> np.ndarray:
-        if self.task == "stand":
-            return np.array([self.target_height], dtype=np.float64)
-        if self.task == "speed":
-            return np.array([self.target_speed], dtype=np.float64)
-        return np.array([self.target_dist], dtype=np.float64)
+        match self.task:
+            case "stand":
+                return np.array([self.target_height], dtype=np.float64)
+            case "speed":
+                return np.array([self.target_speed], dtype=np.float64)
+            case "far":
+                return np.array([self.target_dist], dtype=np.float64)
+            case _:
+                raise ValueError(f"Unknown task: {self.task}")
+
 
     def _achieved_goal(self, qpos: np.ndarray, qvel: np.ndarray) -> np.ndarray:
-        if self.task == "stand":
-            return np.array([qpos[2]], dtype=np.float64)  # torso z
-        if self.task == "speed":
-            return np.array([qvel[0]], dtype=np.float64)  # x velocity
-        return np.array([np.linalg.norm(qpos[:2])], dtype=np.float64)  # xy distance
+        match self.task:
+            case "stand":
+                return np.array([qpos[2]], dtype=np.float64)  # torso z
+            case "speed":
+                return np.array([qvel[0]], dtype=np.float64)  # x velocity
+            case "far":
+                return np.array([np.linalg.norm(qpos[:2])], dtype=np.float64)  # xy distance
+            case _:
+                raise ValueError(f"Unknown task: {self.task}")
 
     def _is_success(self, achieved: np.ndarray, desired: np.ndarray) -> bool:
         # reach-at-least task: achieved >= desired - threshold
