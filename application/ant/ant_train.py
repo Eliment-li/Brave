@@ -24,6 +24,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 
 from application.ant.ant_info_wrapper import OriginalRewardInfoWrapper
+from application.ant.brs_wrapper.v5 import AntBRSRewardWrapperV5
 from configs.base_args import get_root_path
 import swanlab
 from utils.swanlab_callback import SwanLabCallback
@@ -51,7 +52,7 @@ class Args:
     reward_type:str = 'dense'
     target_speed: float = 4.0
     target_height:float = 0.9
-    target_dist:float = 4.0
+    target_dist:float = 5
     #swanlab
     swanlab_project: str = "Brave_Antv4"#final project name = swanlab_project+task
     swanlab_workspace: str = "Eliment-li"
@@ -121,6 +122,7 @@ _WRAPPER_MAP = {
     2: AntBRSRewardWrapperV2,
     3: AntBRSRewardWrapperV3,
     4: AntBRSRewardWrapperV4,
+    5: AntBRSRewardWrapperV5,
 }
 
 _OPTIMIZER_MAP = {
@@ -283,9 +285,10 @@ def train_and_evaluate():
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
-    # args.task='stand'
+    # args.task='far'
     # args.reward_mode='brave'
     # args.r_wrapper_ver=4
+    # args.track=True
     args.finalize()
     for i in range(args.repeat):
         train_and_evaluate()

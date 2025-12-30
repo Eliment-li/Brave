@@ -67,7 +67,8 @@ class AntBRSRewardWrapperV4(gym.Wrapper):
             return float(qpos[2])
         if self.task == "speed":
             return float(qvel[0])
-        return float(np.linalg.norm(qpos[:2]))
+        if self.task == "far":
+            return float(np.linalg.norm(qpos[:2]))
 
     @staticmethod
     def _signed_log(x: float) -> float:

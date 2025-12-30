@@ -30,7 +30,7 @@ class OriginalRewardInfoWrapper(gym.Wrapper):
         info = dict(info)
 
         # 记录未被修改过的最原始 reward
-        info.setdefault(r"standerd_reward", reward)
+        info.setdefault(r"original/standerd_reward", reward)
 
         episode_done = terminated or truncated
         if episode_done:
@@ -45,8 +45,8 @@ class OriginalRewardInfoWrapper(gym.Wrapper):
             info[r"original/ep_rew_mean"] = float(np.mean(self._ep_rew_buffer))
 
         #put metrics into info
-        for m in ["stand", "speed", "height"]:
-            info.setdefault(m, self._current_metric()[["stand", "speed", "height"].index(m)])
+        for m in ["stand", "speed", "far"]:
+            info.setdefault(r'metric/'+m, self._current_metric()[["stand", "speed", "far"].index(m)])
         return obs, reward, terminated, truncated, info
 
     def _current_metric(self) -> float:
@@ -55,7 +55,7 @@ class OriginalRewardInfoWrapper(gym.Wrapper):
         qvel = data.qvel.ravel()
         stand = float(qpos[2])
         speed = float(qvel[0])
-        height = float(np.linalg.norm(qpos[:2]))
+        far = float(np.linalg.norm(qpos[:2]))
 
-        return stand, speed, height
+        return stand, speed, far
 
