@@ -5,13 +5,11 @@ matplotlib
 numpy
 pandas
 gputil
-pygame
 chardet
 openpyxl
-shared-memory-dict
-wandb
 swanlab
 scikit-learn
 arrow
 stable-baselines3[extra]
 mujoco
+tyro
