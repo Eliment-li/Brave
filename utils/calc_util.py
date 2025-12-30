@@ -176,7 +176,7 @@ class SlideWindow:
         if self.queue:
             return self.total / len(self.queue)
         else:
-            return 0
+            return None
 
 
 if __name__ == '__main__':
