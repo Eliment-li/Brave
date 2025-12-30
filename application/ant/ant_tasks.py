@@ -37,7 +37,7 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         target_speed: float = None,
         target_dist: float = None,#4.0
         # costs/health (kept close to Gymnasium Ant defaults)
-        ctrl_cost_weight: float = 0.5,
+        ctrl_cost_weight: float = None, #0.5,
         healthy_reward: float = 1.0,
         terminate_when_unhealthy: bool = True,
         healthy_z_range: tuple[float, float] = (0.2, 1.0),
@@ -219,6 +219,8 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
             # if self.success_cnt>=10:
             terminated = True
             truncated = True
+        # if terminated and (not self.is_healthy):
+        #     reward=-200
         return obs, reward, terminated, truncated, info
 
     def reset_model(self):

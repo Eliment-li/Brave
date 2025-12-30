@@ -53,6 +53,8 @@ class Args:
     target_speed: float = 4.0
     target_height:float = 0.9
     target_dist:float = 5
+    terminate_when_unhealthy: bool = False
+    control_cost_weight: float = 0.2
     #swanlab
     swanlab_project: str = "Brave_Antv4"#final project name = swanlab_project+task
     swanlab_workspace: str = "Eliment-li"
@@ -189,7 +191,9 @@ def train_and_evaluate():
         env = gym.make(args.env_id, reward_type=args.reward_type,
                        target_speed=args.target_speed,
                         target_dist = args.target_dist,
-                       target_height = args.target_height
+                       target_height = args.target_height,
+                        terminate_when_unhealthy = args.terminate_when_unhealthy,
+                       control_cost_weight = args.control_cost_weight
                        )
         env = OriginalRewardInfoWrapper(env)
         env = add_reward_wrapper(env, args)
@@ -252,7 +256,10 @@ def train_and_evaluate():
         base_env = gym.make(args.env_id, render_mode="rgb_array", reward_type=args.reward_type,
                             target_speed=args.target_speed,
                             target_dist=args.target_dist,
-                            target_height=args.target_height)
+                            target_height=args.target_height,
+                            terminate_when_unhealthy=args.terminate_when_unhealthy,
+                            control_cost_weight=args.control_cost_weight
+                            )
         base_env = OriginalRewardInfoWrapper(base_env)
         base_env = add_reward_wrapper(base_env, args)
         video_env = RecordVideo(

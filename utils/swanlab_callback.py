@@ -162,12 +162,17 @@ class SwanLabCallback(BaseCallback):
         dones = self.locals.get("dones", None)
 
         extra_keys =[
-            'standerd_reward',
             'rdcr',
             'rdcr_max',
             'brs_bonus',
-            'episode_max_metric','stand','speed','height'
-            'stander_episode_reward_mean',
+            'episode_max_metric',
+            'ctrl_cost',
+            'healthy_reward',
+             'is_success',
+            'achieved_goal',
+            r'metric/stand','metric/speed','metric/far',
+            r'original/standerd_reward',
+           # r'original/stander_episode_reward_mean',
             r'original/ep_rew_mean',
             r'charts/episodic_return',
             r'charts/episodic_length',
