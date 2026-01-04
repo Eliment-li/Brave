@@ -258,10 +258,11 @@ def train_and_evaluate():
                             target_dist=args.target_dist,
                             target_height=args.target_height,
                             terminate_when_unhealthy=args.terminate_when_unhealthy,
-                            control_cost_weight=args.ctrl_cost_weight
+                            ctrl_cost_weight=args.ctrl_cost_weight
                             )
         base_env = OriginalRewardInfoWrapper(base_env)
         base_env = add_reward_wrapper(base_env, args)
+        base_env = Monitor(base_env, filename=None, allow_early_resets=True)
         video_env = RecordVideo(
             base_env,
             video_folder=str(args.video_dir),
@@ -292,11 +293,11 @@ def train_and_evaluate():
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
-    args.task='far'
-    args.reward_mode='brave'
-    args.reward_type = 'relative'
-    args.r_wrapper_ver=4
-    args.track=True
+    # args.task='far'
+    # args.reward_mode='brave'
+    # args.reward_type = 'relative'
+    # args.r_wrapper_ver=4
+    # args.track=True
     args.finalize()
     for i in range(args.repeat):
         train_and_evaluate()
