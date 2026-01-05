@@ -37,6 +37,14 @@ if not is_windows():
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
+# Set number of threads for torch, to control CPU usage
+torch.set_num_threads(16)
+torch.set_num_interop_threads(2)
+
+print("torch num_threads:", torch.get_num_threads())
+print("torch interop:", torch.get_num_interop_threads())
+print("OMP_NUM_THREADS:", os.environ.get("OMP_NUM_THREADS"))
+
 @dataclass
 class Args:
     task:str = '',#speed far stand
