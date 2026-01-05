@@ -53,8 +53,8 @@ class Args:
     target_speed: float = 4.0
     target_height:float = 0.9
     target_dist:float = 5
-    terminate_when_unhealthy: bool = False
-    ctrl_cost_weight: float = 0.02
+    terminate_when_unhealthy: bool = True
+    ctrl_cost_weight: float = 0.5
     early_break:bool = True
     #swanlab
     swanlab_project: str = "Brave_Antv4"#final project name = swanlab_project+task
@@ -183,7 +183,7 @@ def add_reward_wrapper(env, args):
 
     return env
 
-def train_and_evaluate():
+def train_and_evaluate(args):
     args_dict = asdict(args)
     #set torch seed
     torch.manual_seed(args.seed)
@@ -292,15 +292,11 @@ def train_and_evaluate():
     print(f"Model saved to: {str(model_path)}")
     print(f"Videos saved to: {str(args.video_dir)}")
 
+
 if __name__ == "__main__":
     args = tyro.cli(Args)
-    # args.task='far'
-    # args.reward_mode='brave'
-    # args.reward_type = 'relative'
-    # args.r_wrapper_ver=4
-    # args.track=True
     args.finalize()
     for i in range(args.repeat):
-        train_and_evaluate()
+        train_and_evaluate(args)
         args.reset_seed()
         time.sleep(10)

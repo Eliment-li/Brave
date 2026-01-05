@@ -23,7 +23,6 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
     reward_type controls dense vs sparse:
       - reward_type="sparse": reward in {-1, 0} (0 if success else -1)
       - reward_type="dense":  shaped reward based on task metric, plus healthy_reward, minus ctrl_cost
-      - reward_type="relative":  minimize execution cost using the provided ΔC formulation
     Observation is goal-conditioned Dict:
       {"observation", "achieved_goal", "desired_goal"}
     """
@@ -51,7 +50,7 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         **kwargs,
     ):
         assert task in ("stand", "speed", "far")
-        assert reward_type in ("dense", "sparse", "relative")
+        assert reward_type in ("dense", "sparse")
 
         utils.EzPickle.__init__(
             self,
@@ -177,38 +176,6 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
             return -abs(diff)
         return diff
 
-    def _relative_reward(self, metric_now: float) -> float:
-        # init on first use
-        if self.init_metric is None:
-            self.init_metric = float(metric_now)
-        if self.prev_metric is None:
-            self.prev_metric = float(metric_now)
-
-        # safe scale (avoid div-by-zero / tiny scale)
-        scale = float(abs(self.metric_sw.average)) if self.metric_sw.average is not None else 0.0
-        eps = 1e-8
-        scale = max(scale, eps)
-
-        delta_to_zero = (float(metric_now) - float(self.init_metric)) / scale
-        delta_to_prev = (float(metric_now) - float(self.prev_metric)) / scale
-
-        # clip both
-        delta_to_zero = float(np.clip(delta_to_zero, -1.0 + 1e-6, 1.0 - 1e-6))
-        delta_to_prev = float(np.clip(delta_to_prev, -1.0 + 1e-6, 1.0 - 1e-6))
-
-        # guard NaN/Inf
-        if not np.isfinite(delta_to_zero) or not np.isfinite(delta_to_prev):
-            reward = 0.0
-        else:
-            if delta_to_prev >= 0:
-                reward = ((1.0 + delta_to_prev) ** 2 - 1.0) * (1.0 + delta_to_zero)
-            else:
-                reward = -((1.0 - delta_to_prev) ** 2 - 1.0) * (1.0 + delta_to_zero)
-
-        # update prev after computing reward
-        self.prev_metric = float(metric_now)
-        return float(reward)
-
     # ----------------- gym API -----------------
     def reset(self,*,seed: Optional[int] = None,options: Optional[dict] = None,):
         self.init_metric = None
@@ -252,9 +219,6 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
                 reward = 0.0 if success else -1.0
             case "dense":
                 reward = float(self._task_metric(achieved, desired) + self.healthy_reward - ctrl_cost)
-            case "relative":
-                metric_now = self._task_metric(achieved, desired)
-                reward = self._relative_reward(metric_now) + self.healthy_reward - ctrl_cost
             case _:
                 raiseExceptions(f"Unknown reward_type: {self.reward_type}")
 
