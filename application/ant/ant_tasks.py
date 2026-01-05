@@ -267,13 +267,11 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         }
         if self._early_break:
             if success:
-                terminated = True
                 truncated = True
         return obs, reward, terminated, truncated, info
 
     def reset_model(self):
-        #self._sample_goal()
-
+        self._sample_goal()
         noise_low, noise_high = -self._reset_noise_scale, self._reset_noise_scale
         qpos = self.init_qpos + self.np_random.uniform(noise_low, noise_high, size=self.model.nq)
         qvel = self.init_qvel + self._reset_noise_scale * self.np_random.standard_normal(self.model.nv)
