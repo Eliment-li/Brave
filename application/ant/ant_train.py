@@ -64,6 +64,7 @@ class Args:
     terminate_when_unhealthy: bool = True
     ctrl_cost_weight: float = 0.5
     early_break:bool = True
+    healthy_reward:float = 1.0
     #swanlab
     swanlab_project: str = "Brave_Antv4"#final project name = swanlab_project+task
     swanlab_workspace: str = "Eliment-li"
@@ -203,6 +204,7 @@ def train_and_evaluate(args):
                        target_height = args.target_height,
                         terminate_when_unhealthy = args.terminate_when_unhealthy,
                        ctrl_cost_weight = args.ctrl_cost_weight
+                        ,healthy_reward = args.healthy_reward
                        )
         env = OriginalRewardInfoWrapper(env)
         env = add_reward_wrapper(env, args)
@@ -267,7 +269,8 @@ def train_and_evaluate(args):
                             target_dist=args.target_dist,
                             target_height=args.target_height,
                             terminate_when_unhealthy=args.terminate_when_unhealthy,
-                            ctrl_cost_weight=args.ctrl_cost_weight
+                            ctrl_cost_weight=args.ctrl_cost_weight,
+                            healthy_reward = args.healthy_reward
                             )
         base_env = OriginalRewardInfoWrapper(base_env)
         base_env = add_reward_wrapper(base_env, args)
