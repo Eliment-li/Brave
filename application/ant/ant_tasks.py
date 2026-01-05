@@ -47,6 +47,7 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         healthy_z_range: tuple[float, float] = (0.2, 1.0),
         reset_noise_scale: float = 0.1,
         exclude_current_positions_from_observation: bool = True,
+        early_break:bool = True,
         **kwargs,
     ):
         assert task in ("stand", "speed", "far")
@@ -86,6 +87,7 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         self._healthy_z_range = healthy_z_range
         self._reset_noise_scale = float(reset_noise_scale)
         self._exclude_xy = bool(exclude_current_positions_from_observation)
+        self._early_break = bool(early_break)
 
         # Ant: nq=15, nv=14. Excluding xy in qpos -> 13 + 14 = 27. Otherwise 29.
         obs_dim = 27 if self._exclude_xy else 29
@@ -107,7 +109,6 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
 
         self.metric_sw = SlideWindow(size=100)
         self.state_sw = SlideWindow(size=10)
-        self.success_cnt=0
 
     # ----------------- helpers -----------------
     @property
@@ -212,7 +213,6 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
     def reset(self,*,seed: Optional[int] = None,options: Optional[dict] = None,):
         self.init_metric = None
         self.prev_metric = None
-        self.success_cnt=0
         self.state_sw.reset()
         return  super().reset(seed=seed)
 
@@ -240,9 +240,9 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         self.state_sw.next(achieved[0])
 
         metric_now = self._task_metric(achieved, desired)
-        self.metric_sw.next(metric_now)
+        #self.metric_sw.next(metric_now)
 
-        success = self._is_success(self.state_sw.average, desired[0])
+        success = self._is_success(achieved[0], desired[0])
 
         ctrl_cost = self.control_cost(action)
 
@@ -265,13 +265,10 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
             "achieved_goal": achieved.copy(),
             "desired_goal": desired.copy(),
         }
-        if success:
-            # self.success_cnt +=1
-            # if self.success_cnt>=10:
-            terminated = True
-            truncated = True
-        # if terminated and (not self.is_healthy):
-        #     reward=-200
+        if self._early_break:
+            if success:
+                terminated = True
+                truncated = True
         return obs, reward, terminated, truncated, info
 
     def reset_model(self):

@@ -55,6 +55,7 @@ class Args:
     target_dist:float = 5
     terminate_when_unhealthy: bool = False
     ctrl_cost_weight: float = 0.02
+    early_break:bool = True
     #swanlab
     swanlab_project: str = "Brave_Antv4"#final project name = swanlab_project+task
     swanlab_workspace: str = "Eliment-li"
@@ -162,7 +163,7 @@ def add_reward_wrapper(env, args):
         case 'rnd':
             from baseline.rnd import RNDRewardWrapper
             env = RNDRewardWrapper(env, beta=1.0)
-        case 'ExploRS':
+        case 'explors':
             env = AntExploRSRewardWrapper(
                 env,
                 config=ExploRSConfig(
