@@ -108,6 +108,7 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
 
         self.metric_sw = SlideWindow(size=100)
         self.state_sw = SlideWindow(size=10)
+        self.episode_steps = 0
 
     # ----------------- helpers -----------------
     @property
@@ -181,6 +182,7 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         self.init_metric = None
         self.prev_metric = None
         self.state_sw.reset()
+        self.episode_steps = 0
         return  super().reset(seed=seed)
 
     def _get_obs(self):
@@ -198,6 +200,7 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
 
     def step(self, action):
         self.do_simulation(action, self.frame_skip)
+        self.episode_steps+=1
         obs = self._get_obs()
 
         terminated = self.terminated
@@ -229,6 +232,8 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
             "achieved_goal": achieved.copy(),
             "desired_goal": desired.copy(),
         }
+        if (terminated or truncated) and self.is_healthy and self.episode_steps<200:
+            print(f'warn terminated={terminated}, truncated={terminated},is_healthy={self.is_healthy},step = {self.episode_steps}')
         if self._early_break:
             if success:
                 truncated = True

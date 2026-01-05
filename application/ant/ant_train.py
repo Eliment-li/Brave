@@ -41,7 +41,7 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 class Args:
     task:str = '',#speed far stand
     env_id: str = ""#AntStand-v0, AntSpeed-v0, AntFar-v0
-    total_timesteps: int = int(1e4)
+    total_timesteps: int = int(1e6)
     repeat: int = 1
     seed: int = -1
     track: bool = False
