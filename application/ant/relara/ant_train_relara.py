@@ -27,7 +27,11 @@ class Args:
     reward_type: str = "dense"
     speed_target: float = 4.0
     height_target: float = 0.9
-    dist_target: float = 4.0
+    dist_target: float = 5.0
+    terminate_when_unhealthy: bool = True
+    ctrl_cost_weight: float = 0.5
+    early_break: bool = True
+    healthy_reward: float = 1.0
 
     # ReLara hyperparams
     beta: float = 0.2
@@ -75,6 +79,10 @@ def main(args: Args):
         target_speed=args.speed_target ,
         target_height=args.height_target ,
         target_dist=args.dist_target ,
+        terminate_when_unhealthy=args.terminate_when_unhealthy,
+        ctrl_cost_weight = args.ctrl_cost_weight,
+        early_break=args.early_break,
+        healthy_reward=args.healthy_reward,
         transform_sparse_reward=args.transform_sparse_reward,
     )
     env = OriginalRewardInfoWrapper(env)
