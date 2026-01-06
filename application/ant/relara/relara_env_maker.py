@@ -12,6 +12,10 @@ def make_ant_relara_env(
     target_speed: float | None = None,
     target_dist: float | None = None,
     transform_sparse_reward: bool = False,
+    terminate_when_unhealthy: bool = True,
+    ctrl_cost_weight:float=0.5,
+    early_break:bool=True,
+    healthy_reward:float=1,
 ):
     """
     Create an env compatible with ReLara author's assumptions:
@@ -27,6 +31,10 @@ def make_ant_relara_env(
         target_height=target_height,
         target_speed=target_speed,
         target_dist=target_dist,
+        terminate_when_unhealthy=terminate_when_unhealthy,
+        ctrl_cost_weight=ctrl_cost_weight,
+        early_break=early_break,
+        healthy_reward=healthy_reward,
     )
 
     # Optional: match author's robotics_env_maker behavior for sparse tasks.
