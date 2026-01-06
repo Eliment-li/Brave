@@ -207,9 +207,14 @@ class ReLaraAlgo:
         self.ra_target_frequency = int(cfg.ra_target_frequency)
         self.ra_tau = float(cfg.ra_tau)
         self.success_buffer: deque[float] = deque(maxlen=100)
+        #for original/ep_rew_mean
+        self._current_episode_reward: float = 0.0
+        self._ep_rew_buffer: deque[float] = deque(maxlen=100)
 
     def learn(self, total_timesteps: int = int(1e6), pa_learning_starts: int = int(1e4), ra_learning_starts: int = int(5e3)):
         obs, _info = self.env.reset(seed=self.seed)
+        # for original/ep_rew_mean
+        self._current_episode_reward = 0.0
 
         for global_step in range(int(total_timesteps)):
             # first action
@@ -231,17 +236,31 @@ class ReLaraAlgo:
 
             next_obs, reward_env, terminated, truncated, info = self.env.step(action)
             done = bool(terminated or truncated)
-            #log
-            swanlab.log(
-                {
-                    "standerd_reward": reward_env,
-                    "reward_pro": reward_pro,
-                    "speed": info.get("speed", 0.0),
-                    "height": info.get("height", 0.0),
-                    "stand": info.get("stand", 0.0),
-                },
-                step=global_step,
-            )
+
+            #for log
+            #relara is not compatible with OriginalRewardInfoWrapper,in OriginalRewardInfoWrapper
+            #we can not get standerd_reward, because the reward_pro is trerated as reward for env
+            #so we calc the ep_rew_mean here manually
+            self._current_episode_reward += float(reward_env)
+            # data = self.env.unwrapped.data
+            # qpos = data.qpos.ravel()
+            # qvel = data.qvel.ravel()
+            # stand = float(qpos[2])
+            # speed = float(qvel[0])
+            # far = float(np.linalg.norm(qpos[:2]))
+
+            log_data = {
+                r"original/standerd_reward": reward_env,
+                r"reward_pro": reward_pro,
+                # r"metric/speed": speed,
+                # r"metric/far": far,
+                # r"metric/stand": stand,
+            }
+            # for original/ep_rew_mean
+            ep_rew_mean = float(np.mean(self._ep_rew_buffer)) if self._ep_rew_buffer else None
+            if ep_rew_mean is not None:
+                log_data[r"original/ep_rew_mean"] = ep_rew_mean
+            swanlab.log(log_data, step=global_step)
 
 
             # PA stores env reward only
@@ -251,6 +270,8 @@ class ReLaraAlgo:
                 obs = next_obs
             else:
                 # 记录 rollout 成功率
+                self._ep_rew_buffer.append(self._current_episode_reward)
+                self._current_episode_reward = 0.0
                 success = self._extract_success(info)
                 if success is not None:
                     self.success_buffer.append(success)

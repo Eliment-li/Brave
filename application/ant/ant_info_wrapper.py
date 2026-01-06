@@ -29,8 +29,9 @@ class OriginalRewardInfoWrapper(gym.Wrapper):
         self._current_rew += float(reward)
         info = dict(info)
 
-        # 记录未被修改过的最原始 reward
-        info.setdefault(r"original/standerd_reward", reward)
+        # 记录未被修改过的最原始 reward, 如果使用 relara 那么这里已经被存入了对应的正确值 不要再覆盖
+        if info.get(r"original/standerd_reward") is None:
+            info.setdefault(r"original/standerd_reward", reward)
 
         episode_done = terminated or truncated
         if episode_done:
@@ -42,7 +43,9 @@ class OriginalRewardInfoWrapper(gym.Wrapper):
         if self._ep_len_buffer:
             info[r"original/ep_len_mean"] = float(np.mean(self._ep_len_buffer))
         if self._ep_rew_buffer:
-            info[r"original/ep_rew_mean"] = float(np.mean(self._ep_rew_buffer))
+            # 如果使用 relara 那么这里已经被存入了对应的正确值 不要再覆盖
+            if info.get(r'original/ep_rew_mean') is None:
+                info[r"original/ep_rew_mean"] = float(np.mean(self._ep_rew_buffer))
 
         #put metrics into info
         for m in ["stand", "speed", "far"]:

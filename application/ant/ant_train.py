@@ -92,7 +92,7 @@ class Args:
     def finalize(self):
         if args.num_threads > 0:
             # Set number of threads for torch, to control CPU usage
-            torch.set_num_threads(16)
+            torch.set_num_threads(args.num_threads)
             torch.set_num_interop_threads(2)
         task_map = {
             'stand':"AntStand-v0",

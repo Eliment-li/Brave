@@ -7,6 +7,7 @@ import numpy as np
 import swanlab
 import torch
 import tyro
+from stable_baselines3.common.monitor import Monitor
 
 import application.ant.ant_tasks  # ensure env registration
 from application.ant.ant_info_wrapper import OriginalRewardInfoWrapper
@@ -93,7 +94,7 @@ def main(args: Args):
         transform_sparse_reward=args.transform_sparse_reward,
     )
     env = OriginalRewardInfoWrapper(env)
-
+    env = Monitor(env, filename=None, allow_early_resets=True)
     cfg = ReLaraConfig(
         exp_name=args.experiment_name,
         seed=args.seed,
