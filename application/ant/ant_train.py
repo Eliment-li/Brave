@@ -37,13 +37,6 @@ if not is_windows():
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
-# Set number of threads for torch, to control CPU usage
-torch.set_num_threads(16)
-torch.set_num_interop_threads(2)
-
-print("torch num_threads:", torch.get_num_threads())
-print("torch interop:", torch.get_num_interop_threads())
-print("OMP_NUM_THREADS:", os.environ.get("OMP_NUM_THREADS"))
 
 @dataclass
 class Args:
@@ -90,10 +83,17 @@ class Args:
     optimizer: str = "adam"
     optimizer_eps: float = 1e-7
 
+    #others
+    num_threads:int=-1
+
     def reset_seed(self):
         self.seed = torch.randint(0, 10000, (1,)).item()
 
     def finalize(self):
+        if args.num_threads > 0:
+            # Set number of threads for torch, to control CPU usage
+            torch.set_num_threads(16)
+            torch.set_num_interop_threads(2)
         task_map = {
             'stand':"AntStand-v0",
             'far': 'AntFar-v0',
@@ -111,7 +111,6 @@ class Args:
         if self.seed == -1:
             self.reset_seed()
         print(f"Using seed: {self.seed}")
-
         self.append_tags()
     def append_tags(self):
         if self.tags:
@@ -307,6 +306,10 @@ def train_and_evaluate(args):
 if __name__ == "__main__":
     args = tyro.cli(Args)
     args.finalize()
+
+    print("torch num_threads:", torch.get_num_threads())
+    print("torch interop:", torch.get_num_interop_threads())
+    print("OMP_NUM_THREADS:", os.environ.get("OMP_NUM_THREADS"))
     for i in range(args.repeat):
         train_and_evaluate(args)
         args.reset_seed()

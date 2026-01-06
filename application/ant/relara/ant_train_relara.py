@@ -1,3 +1,4 @@
+import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -51,10 +52,16 @@ class Args:
     swanlab_project: str = "Brave_Antv4"  # final project name = swanlab_project+task
     repeat:int = 1
 
+    num_threads:int = -1
+
     def reset_seed(self):
         self.seed = torch.randint(0, 10000, (1,)).item()
 
     def finalize(self):
+        if args.num_threads > 0:
+            # Set number of threads for torch, to control CPU usage
+            torch.set_num_threads(16)
+            torch.set_num_interop_threads(2)
         task_map = {
             'stand': "AntStand-v0",
             'far': 'AntFar-v0',
@@ -125,6 +132,9 @@ def main(args: Args):
 if __name__ == "__main__":
     args = tyro.cli(Args)
     args.finalize()
+    print("torch num_threads:", torch.get_num_threads())
+    print("torch interop:", torch.get_num_interop_threads())
+    print("OMP_NUM_THREADS:", os.environ.get("OMP_NUM_THREADS"))
     for i in range(args.repeat):
         args.reset_seed()
         main(args)
