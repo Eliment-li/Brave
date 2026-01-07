@@ -1,6 +1,6 @@
 import tyro
 
-from application.ant.ant_train import Args, train_and_evaluate
+from application.ant.basic.ant_train import Args, train_and_evaluate
 
 if __name__ == "__main__":
     args = tyro.cli(Args)

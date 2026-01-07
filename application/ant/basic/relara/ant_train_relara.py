@@ -9,12 +9,11 @@ import torch
 import tyro
 from stable_baselines3.common.monitor import Monitor
 
-import application.ant.ant_tasks  # ensure env registration
-from application.ant.ant_info_wrapper import OriginalRewardInfoWrapper
+from application.ant.basic.wrappers.ant_info_wrapper import OriginalRewardInfoWrapper
 
-from application.ant.relara.relara_env_maker import make_ant_relara_env
-from application.ant.relara.relara_algo import ReLaraAlgo, ReLaraConfig
-from application.ant.relara.relara_networks import BasicActor, BasicQNetwork, ActorResidual, QNetworkResidual
+from application.ant.basic.relara.relara_env_maker import make_ant_relara_env
+from application.ant.basic.relara.relara_algo import ReLaraAlgo, ReLaraConfig
+from application.ant.basic.relara.relara_networks import BasicActor, BasicQNetwork, ActorResidual, QNetworkResidual
 from configs.base_args import get_root_path
 
 

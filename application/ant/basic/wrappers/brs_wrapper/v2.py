@@ -1,4 +1,4 @@
-from application.ant.brs_wrapper.v1 import AntBRSRewardWrapperV1, NovelRewardConfig
+from application.ant.basic.wrappers.brs_wrapper.v1 import AntBRSRewardWrapperV1, NovelRewardConfig
 from typing import Dict, Optional
 import gymnasium as gym
 

@@ -13,7 +13,7 @@ import tyro
 from torch.distributions.categorical import Categorical
 
 from configs.ppo_args import PpoAtariArgs
-from core.rewardWrapper import BreakoutRewardWrapper
+from bak.rewardWrapper import BreakoutRewardWrapper
 from cleanrl_utils.atari_wrappers import (
     EpisodicLifeEnv,
     FireResetEnv,

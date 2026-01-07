@@ -6,11 +6,11 @@ import os
 from stable_baselines3.common.env_util import make_vec_env
 from swanlab.env import is_windows
 
-from application.ant.ant_explors_wrapper import AntExploRSRewardWrapper, ExploRSConfig
-from application.ant.brs_wrapper.v1 import AntBRSRewardWrapperV1
-from application.ant.brs_wrapper.v2 import AntBRSRewardWrapperV2
-from application.ant.brs_wrapper.v3 import AntBRSRewardWrapperV3
-from application.ant.brs_wrapper.v4 import AntBRSRewardWrapperV4
+from application.ant.basic.wrappers.ant_explors_wrapper import AntExploRSRewardWrapper, ExploRSConfig
+from application.ant.basic.wrappers.brs_wrapper.v1 import AntBRSRewardWrapperV1
+from application.ant.basic.wrappers.brs_wrapper.v2 import AntBRSRewardWrapperV2
+from application.ant.basic.wrappers.brs_wrapper.v3 import AntBRSRewardWrapperV3
+from application.ant.basic.wrappers.brs_wrapper.v4 import AntBRSRewardWrapperV4
 
 import gymnasium as gym
 import arrow
@@ -23,13 +23,12 @@ from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 
-from application.ant.ant_info_wrapper import OriginalRewardInfoWrapper
-from application.ant.brs_wrapper.v5 import AntBRSRewardWrapperV5
+from application.ant.basic.wrappers.ant_info_wrapper import OriginalRewardInfoWrapper
+from application.ant.basic.wrappers.brs_wrapper.v5 import AntBRSRewardWrapperV5
 from configs.base_args import get_root_path
 import swanlab
 from utils.swanlab_callback import SwanLabCallback
 import tyro
-import application.ant.ant_tasks
 
 if not is_windows():
     os.environ.setdefault("MUJOCO_GL", "egl")
@@ -169,7 +168,7 @@ def add_reward_wrapper(env, args):
         case 'brave':
             env = make_ant_brs_wrapper(env, args.r_wrapper_ver)
         case 'rnd':
-            from baseline.rnd import RNDRewardWrapper
+            from application.ant.basic.wrappers.ant_rnd_wrapper import RNDRewardWrapper
             env = RNDRewardWrapper(env, beta=1.0)
         case 'explors':
             env = AntExploRSRewardWrapper(
