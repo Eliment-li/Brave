@@ -9,7 +9,7 @@ class AntBRSRewardWrapperV5(gym.Wrapper):
         self,
         env: gym.Env,
         gamma: float = 0.99,
-        beta: float = 1.00001,
+        beta: float = 1.05,
         min_bonus: float = 0.1,
     ):
         super().__init__(env)
@@ -20,21 +20,20 @@ class AntBRSRewardWrapperV5(gym.Wrapper):
         self.gamma = float(gamma)
         self.beta = float(beta)
         self.min_bonus = float(min_bonus)
-        self.metric_max = self._current_metric()
-        self.episode_best_metric = 0.0
+        self.global_best = self._current_metric()
+        self.episode_best = self._current_metric()
         self.rdcr = 0.0
         self.rdcr_max = 0.0
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
-        #self.metric_max = self._current_metric()
-        self.episode_best_metric = self._current_metric()
+        self.episode_best = self._current_metric()
         self.rdcr = 0.0
         # self.rdcr_max = 0.0
         info = dict(info or {})
         info["rdcr"] = self.rdcr
         info["rdcr_max"] = self.rdcr_max
-        info["metric_max_"+self.task] = self.metric_max
+        info["global_best_"+self.task] = self.global_best
         return obs, info
 
     def step(self, action):
@@ -43,28 +42,34 @@ class AntBRSRewardWrapperV5(gym.Wrapper):
         info[str(self.task)] = metric
 
         bonus = 0.0
-        if metric > self.episode_best_metric:
-            self.episode_best_metric = metric
-            bonus+=self.min_bonus
-            #global metic_max update
-            if metric > self.metric_max:
-                self.metric_max = metric
-                extra_bonus = self.beta*(self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus
-                bonus += extra_bonus
-                reward = bonus
-                self.rdcr = self.gamma * self.rdcr + reward
-                assert self.rdcr > self.rdcr_max, f"rdcr did not increase: {self.rdcr} <= {self.rdcr_max}"
+        if metric > self.episode_best:
+            self.episode_best = metric
+            bonus+=(self.beta*(self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus)
+
+            #global
+            if metric > self.global_best:
+                self.global_best = metric
+                #extra_bonus = self.beta*(self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus
+                bonus *= 2
+                bonus = max(0,bonus)
+
+            reward = bonus
+            self.rdcr = self.gamma * self.rdcr + reward
+            assert self.rdcr > self.rdcr_max, f"rdcr did not increase: {self.rdcr} <= {self.rdcr_max}"
         else:
             self.rdcr = self.gamma * self.rdcr + reward
 
 
         self.rdcr_max = max(self.rdcr_max, self.rdcr)
+
+        # Be defensive: some envs/wrappers may return immutable mappings.
         info = dict(info or {})
         info["brs_bonus"] = bonus
         info["rdcr"] = self.rdcr
         info["rdcr_max"] = self.rdcr_max
         info[str(self.task)] = metric
-        info["metric_max_"+self.task] = self.metric_max
+        info["global_best_"+self.task] = self.global_best
+        info["episode_best_"+self.task] = self.episode_best
         return obs, reward, terminated, truncated, info
 
     def _current_metric(self) -> float:
