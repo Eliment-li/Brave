@@ -9,7 +9,7 @@ import torch
 import tyro
 from stable_baselines3.common.monitor import Monitor
 
-from application.ant.basic.wrappers.ant_info_wrapper import OriginalRewardInfoWrapper
+from application.ant.basic.wrappers.ant_info_wrapper import AntTaskInfoWrapper
 
 from application.ant.basic.relara.relara_env_maker import make_ant_relara_env
 from application.ant.basic.relara.relara_algo import ReLaraAlgo, ReLaraConfig
@@ -92,7 +92,7 @@ def main(args: Args):
         healthy_reward=args.healthy_reward,
         transform_sparse_reward=args.transform_sparse_reward,
     )
-    env = OriginalRewardInfoWrapper(env)
+    env = AntTaskInfoWrapper(env)
     env = Monitor(env, filename=None, allow_early_resets=True)
     cfg = ReLaraConfig(
         exp_name=args.experiment_name,

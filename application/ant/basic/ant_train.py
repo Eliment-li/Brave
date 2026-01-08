@@ -23,7 +23,7 @@ from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 
-from application.ant.basic.wrappers.ant_info_wrapper import OriginalRewardInfoWrapper
+from application.ant.basic.wrappers.ant_info_wrapper import AntTaskInfoWrapper
 from application.ant.basic.wrappers.brs_wrapper.v5 import AntBRSRewardWrapperV5
 from configs.base_args import get_root_path
 import swanlab
@@ -204,7 +204,7 @@ def train_and_evaluate(args):
                        ctrl_cost_weight = args.ctrl_cost_weight
                         ,healthy_reward = args.healthy_reward
                        )
-        env = OriginalRewardInfoWrapper(env)
+        env = AntTaskInfoWrapper(env)
         env = add_reward_wrapper(env, args)
         env = Monitor(env, filename=None, allow_early_resets=True)
         env.reset(seed=args.seed)
@@ -270,7 +270,7 @@ def train_and_evaluate(args):
                             ctrl_cost_weight=args.ctrl_cost_weight,
                             healthy_reward = args.healthy_reward
                             )
-        base_env = OriginalRewardInfoWrapper(base_env)
+        base_env = AntTaskInfoWrapper(base_env)
         base_env = add_reward_wrapper(base_env, args)
         base_env = Monitor(base_env, filename=None, allow_early_resets=True)
         video_env = RecordVideo(

@@ -20,6 +20,7 @@ import swanlab
 from swanlab.env import is_windows
 
 from application.ant.basic.wrappers.ant_explors_wrapper import ExploRSConfig
+from application.ant.basic.wrappers.ant_info_wrapper import AntMazeInfoWrapper
 from configs.base_args import get_root_path
 from core.ant_maze_brs_wrapper import AntMazeBRSRewardWrapper
 from utils.camera import FixedMujocoOffscreenRender
@@ -107,7 +108,7 @@ def add_reward_wrapper(env, args):
     print(f'Adding reward wrapper: {args.reward_mode}')
     match args.reward_mode:
         case 'brave':
-            env = AntMazeBRSRewardWrapper(env, args.r_wrapper_ver)
+            env = AntMazeBRSRewardWrapper(env)
         # case 'rnd':
         #     from application.ant.basic.wrappers.ant_rnd_wrapper import RNDRewardWrapper
         #     env = RNDRewardWrapper(env, beta=1.0)
@@ -128,7 +129,8 @@ def add_reward_wrapper(env, args):
         #     )
         case 'standerd':
             pass
-
+        case _:
+            pass
     return env
 def save_model(model: TD3, path: str) -> None:
     model.save(path)
@@ -144,6 +146,8 @@ def train_and_evaluate(args: Args):
         env = gym.make(args.env_id,reward_type=args.reward_type)
         # 如需把原始 reward 写入 info，可在这里包 wrapper（若你有对应实现）
         # env = OriginalRewardInfoWrapper(env)
+        env = AntMazeInfoWrapper(env)
+        env = add_reward_wrapper(env, args)
         env = Monitor(env, filename=None, allow_early_resets=True)
         env.reset(seed=args.seed)
         return env
@@ -197,6 +201,7 @@ def train_and_evaluate(args: Args):
             render_mode="rgb_array",
             reward_type=args.reward_type,
         )
+        env = add_reward_wrapper(base_env,args)
         base_env = Monitor(base_env, filename=None, allow_early_resets=True)
         base_env = FixedMujocoOffscreenRender(base_env, None, width=480, height=480)
         video_env = RecordVideo(
@@ -241,3 +246,4 @@ if __name__ == "__main__":
         args.reset_seed()
         time.sleep(10)
 
+#python -m application.ant.maze.ant_maze_train   --total_timesteps 1000000 --track --reward-mode brave
