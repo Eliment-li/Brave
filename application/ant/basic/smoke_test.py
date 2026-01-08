@@ -1,7 +1,7 @@
 import tyro
 
 from application.ant.basic.ant_train import Args, train_and_evaluate
-
+import  application.ant.basic.ant_tasks
 if __name__ == "__main__":
     args = tyro.cli(Args)
     args.task='speed'

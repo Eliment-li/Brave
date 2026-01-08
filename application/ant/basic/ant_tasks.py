@@ -271,6 +271,6 @@ class AntFar(AntTaskEnv):
 
 
 # -------- registration (import this module once) --------
-register(id="AntStand-v0", entry_point="application.ant.ant_tasks:AntStand", max_episode_steps=200)
-register(id="AntSpeed-v0", entry_point="application.ant.ant_tasks:AntSpeed", max_episode_steps=200)
-register(id="AntFar-v0",   entry_point="application.ant.ant_tasks:AntFar",   max_episode_steps=200)
+register(id="AntStand-v0", entry_point="application.ant.basic.ant_tasks:AntStand", max_episode_steps=200)
+register(id="AntSpeed-v0", entry_point="application.ant.basic.ant_tasks:AntSpeed", max_episode_steps=200)
+register(id="AntFar-v0",   entry_point="application.ant.basic.ant_tasks:AntFar",   max_episode_steps=200)

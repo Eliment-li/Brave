@@ -7,11 +7,8 @@ from stable_baselines3.common.env_util import make_vec_env
 from swanlab.env import is_windows
 
 from application.ant.basic.wrappers.ant_explors_wrapper import AntExploRSRewardWrapper, ExploRSConfig
-from application.ant.basic.wrappers.brs_wrapper.v1 import AntBRSRewardWrapperV1
-from application.ant.basic.wrappers.brs_wrapper.v2 import AntBRSRewardWrapperV2
-from application.ant.basic.wrappers.brs_wrapper.v3 import AntBRSRewardWrapperV3
 from application.ant.basic.wrappers.brs_wrapper.v4 import AntBRSRewardWrapperV4
-
+from application.ant.basic.wrappers.brs_wrapper.v5 import AntBRSRewardWrapperV5
 import gymnasium as gym
 import arrow
 import numpy as np
@@ -24,12 +21,12 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 
 from application.ant.basic.wrappers.ant_info_wrapper import AntTaskInfoWrapper
-from application.ant.basic.wrappers.brs_wrapper.v5 import AntBRSRewardWrapperV5
+
 from configs.base_args import get_root_path
 import swanlab
 from utils.swanlab_callback import SwanLabCallback
 import tyro
-
+import  application.ant.basic.ant_tasks
 if not is_windows():
     os.environ.setdefault("MUJOCO_GL", "egl")
     os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
@@ -89,9 +86,9 @@ class Args:
         self.seed = torch.randint(0, 10000, (1,)).item()
 
     def finalize(self):
-        if args.num_threads > 0:
+        if self.num_threads > 0:
             # Set number of threads for torch, to control CPU usage
-            torch.set_num_threads(args.num_threads)
+            torch.set_num_threads(self.num_threads)
             torch.set_num_interop_threads(2)
         task_map = {
             'stand':"AntStand-v0",
@@ -128,9 +125,6 @@ class Args:
 
 
 _WRAPPER_MAP = {
-    1: AntBRSRewardWrapperV1,
-    2: AntBRSRewardWrapperV2,
-    3: AntBRSRewardWrapperV3,
     4: AntBRSRewardWrapperV4,
     5: AntBRSRewardWrapperV5,
 }
