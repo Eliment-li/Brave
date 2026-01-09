@@ -9,7 +9,7 @@ class AntBRSRewardWrapperV4(gym.Wrapper):
         env: gym.Env,
         gamma: float = 0.99,
         beta: float = 1.1,
-        min_bonus: float = 0.01,
+        min_bonus: float = 0.1,
     ):
         super().__init__(env)
 
@@ -19,29 +19,31 @@ class AntBRSRewardWrapperV4(gym.Wrapper):
         self.gamma = float(gamma)
         self.beta = float(beta)
         self.min_bonus = float(min_bonus)
-        self.metric_max = 0.0
+        self.episode_max = 0.0
         self.rdcr = 0.0
         self.rdcr_max = 0.0
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
-        self.metric_max = self._current_metric()
+        info = dict(info or {})
+        self.episode_max = self._current_metric()
         self.rdcr = 0.0
         self.rdcr_max = 0.0
         info = dict(info or {})
         info["rdcr"] = self.rdcr
         info["rdcr_max"] = self.rdcr_max
-        info["metric_max_"+self.task] = self.metric_max
+        info["episode_max_"+self.task] = self.episode_max
         return obs, info
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
+        info = dict(info or {})
         metric = self._current_metric()
         info[str(self.task)] = metric
 
         bonus = 0.0
-        if metric > self.metric_max:
-            self.metric_max = metric
+        if metric > self.episode_max:
+            self.episode_max = metric
             bonus = self.beta * (self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus
             #bonus = self._signed_log(max(target, self.min_bonus))
             reward = bonus
@@ -51,12 +53,12 @@ class AntBRSRewardWrapperV4(gym.Wrapper):
             self.rdcr = self.gamma * self.rdcr + reward
         self.rdcr_max = max(self.rdcr_max, self.rdcr)
 
-        info = dict(info or {})
+
         info["brs_bonus"] = bonus
         info["rdcr"] = self.rdcr
         info["rdcr_max"] = self.rdcr_max
         info[str(self.task)] = metric
-        info["metric_max_"+self.task] = self.metric_max
+        info["metric/episode_max"] = self.episode_max
         return obs, reward, terminated, truncated, info
 
     def _current_metric(self) -> float:
