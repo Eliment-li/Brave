@@ -1,7 +1,10 @@
 import tyro
 
 from application.ant.basic.ant_train import Args, train_and_evaluate
-import  application.ant.basic.ant_tasks
+# from stable_baselines3.common.logger import configure
+#
+# # 彻底禁用 SB3 控制台输出
+# configure(folder=None, format_strings=[])
 if __name__ == "__main__":
     args = tyro.cli(Args)
     args.task='speed'
