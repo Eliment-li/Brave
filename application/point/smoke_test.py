@@ -4,7 +4,7 @@ import gymnasium_robotics
 import torch
 import tyro
 import  gymnasium as gym
-from application.point.train_point_maze import Args, train_and_evaluate
+from application.point.point_maze_train import Args, train_and_evaluate
 
 if __name__ == "__main__":
     gym.register_envs(gymnasium_robotics)
