@@ -1,7 +1,7 @@
 import numpy as np
 import gymnasium as gym
 
-from core.brs_wrapper import BRSRewardWrapperBase
+from core.brs.brs_wrapper import BRSRewardWrapperBase
 
 
 class AntMazeBRSRewardWrapper(BRSRewardWrapperBase):
