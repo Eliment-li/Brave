@@ -232,8 +232,7 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
             "achieved_goal": achieved.copy(),
             "desired_goal": desired.copy(),
         }
-        if (terminated or truncated) and self.is_healthy and self.episode_steps<200:
-            print(f'warn terminated={terminated}, truncated={terminated},is_healthy={self.is_healthy},step = {self.episode_steps}')
+
         if self._early_break:
             if success:
                 truncated = True

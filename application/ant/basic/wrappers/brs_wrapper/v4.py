@@ -58,7 +58,7 @@ class AntBRSRewardWrapperV4(gym.Wrapper):
         info["rdcr"] = self.rdcr
         info["rdcr_max"] = self.rdcr_max
         info[str(self.task)] = metric
-        info["metric/episode_max"] = self.episode_max
+        info[r"metric/episode_max"] = self.episode_max
         return obs, reward, terminated, truncated, info
 
     def _current_metric(self) -> float:

@@ -15,7 +15,7 @@ from application.ant.basic.relara.relara_env_maker import make_ant_relara_env
 from application.ant.basic.relara.relara_algo import ReLaraAlgo, ReLaraConfig
 from application.ant.basic.relara.relara_networks import BasicActor, BasicQNetwork, ActorResidual, QNetworkResidual
 from configs.base_args import get_root_path
-
+import  application.ant.basic.ant_tasks
 
 @dataclass
 class Args:

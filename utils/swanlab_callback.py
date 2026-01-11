@@ -171,13 +171,15 @@ class SwanLabCallback(BaseCallback):
             'achieved_goal',
             r'metric/global_max',
             r'metric/episode_max',
-            r'metric/stand',r'metric/speed',r'metric/far',
+            r'metric/stand',
+            r'metric/speed',
+            r'metric/far',
             r'original/standerd_reward',
            # r'original/stander_episode_reward_mean',
             r'original/ep_rew_mean',
-            r'original/ep_len_mean',
-            r'charts/episodic_return',
-            r'charts/episodic_length',
+            #r'original/ep_len_mean',
+            r'rollout/episodic_return',
+            #r'charts/episodic_length',
             'cost','best_cost','delta','improved'
         ]
 
@@ -194,7 +196,7 @@ class SwanLabCallback(BaseCallback):
                 if isinstance(episode, dict):
                     payload = {}
                     if "r" in episode:
-                        payload["charts/episodic_return"] = episode["r"]
+                        payload["rollout/episodic_return"] = episode["r"]
                     if "l" in episode:
                         payload["charts/episodic_length"] = episode["l"]
                     if payload:
