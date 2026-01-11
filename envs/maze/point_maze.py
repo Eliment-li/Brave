@@ -117,7 +117,6 @@ class PointMazeEnv(MazeEnv, EzPickle):
             reset_target=reset_target,
             **kwargs,
         )
-
         maze_length = len(maze_map)
         default_camera_config = {"distance": 12.5 if maze_length > 8 else 8.8}
 
@@ -214,3 +213,6 @@ class PointMazeEnv(MazeEnv, EzPickle):
     @property
     def data(self):
         return self.point_env.data
+
+from gymnasium.envs.registration import register
+register(id="PointMazeEnv-v0", entry_point="envs.maze.point_maze:PointMazeEnv", max_episode_steps=2500)
