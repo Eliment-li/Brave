@@ -97,8 +97,8 @@ class AntMazeInfoWrapper(gym.Wrapper):
             self._current_len = 0
             self._current_rew = 0.0
 
-        if self._ep_len_buffer:
-            info[r"original/ep_len_mean"] = float(np.mean(self._ep_len_buffer))
+        # if self._ep_len_buffer:
+        #     info[r"original/ep_len_mean"] = float(np.mean(self._ep_len_buffer))
         if self._ep_rew_buffer:
             # 如果使用 relara 那么这里已经被存入了对应的正确值 不要再覆盖
             if info.get(r'original/ep_rew_mean') is None:
