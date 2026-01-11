@@ -27,29 +27,27 @@ class ExploRSConfig:
     # 只要你用 exclude_xy=True，那么观测里不含 x,y；因此这里建议直接从 unwrapped.data.qpos/qvel 取
     use_mujoco_state: bool = True
 
+    # 当 fallback 到 obs 向量时，最多取前 k 维做分桶（避免维度太大导致 key 爆炸）
+    obs_fallback_k: int = 6
+
 
 def _bin(x: float, width: float) -> int:
     return int(np.floor(float(x) / float(width)))
 
 
-class AntExploRSRewardWrapper(gym.Wrapper):
+class ExploRSRewardWrapper(gym.Wrapper):
     """
-    ExploRS-like wrapper for AntTaskEnv (goal-conditioned dict obs).
+    ExploRS-like reward shaping wrapper (generic).
 
-    - Exploration bonus: count-based bonus on phi(s')
-    - Exploitation shaping (simplified): progress on goal gap (achieved vs desired)
-
-    Works for both reward_type='dense' and 'sparse' because we treat env reward as r_orig and add bonuses.
+    Assumptions (best-effort):
+    - obs is goal-conditioned dict with keys: achieved_goal, desired_goal (any shape)
+    - MuJoCo envs expose env.unwrapped.data.qpos/qvel (optional, preferred for phi)
     """
 
     def __init__(self, env: gym.Env, config: ExploRSConfig | None = None):
         super().__init__(env)
         self.cfg = config or ExploRSConfig()
-
-        # Count table: key -> N(key)
         self._counts: Dict[Hashable, int] = {}
-
-        # For exploitation shaping (progress-based)
         self._prev_goal_gap: float | None = None
 
     def reset(self, **kwargs):
@@ -70,23 +68,20 @@ class AntExploRSRewardWrapper(gym.Wrapper):
         n = self._counts.get(key, 0) + 1
         self._counts[key] = n
 
-        # ExploB-style: lmbd / sqrt((lmbd/max)^2 + N)
         denom = np.sqrt((self.cfg.lmbd / self.cfg.max_bonus) ** 2 + float(n))
         r_explore = float(self.cfg.lmbd / denom) * float(self.cfg.explore_scale)
 
-        # ---- exploitation shaping (simplified progress) ----
+        # ---- exploitation shaping (progress) ----
         gap = self._goal_gap(obs)
         if self._prev_goal_gap is None:
             r_exploit = 0.0
         else:
-            # progress: gap decreases => positive shaping
             progress = float(self._prev_goal_gap - gap)
             r_exploit = float(np.clip(progress, -self.cfg.exploit_clip, self.cfg.exploit_clip)) * float(
                 self.cfg.exploit_scale
             )
         self._prev_goal_gap = gap
 
-        # ---- total shaped reward ----
         r_hat = float(r_orig) + r_explore + r_exploit
 
         # ---- logging ----
@@ -100,53 +95,49 @@ class AntExploRSRewardWrapper(gym.Wrapper):
 
         return obs, r_hat, terminated, truncated, info
 
-    # -----------------
-    # phi: 通用分桶
-    # -----------------
     def phi(self, obs: Any) -> Tuple:
-        """
-        A task-agnostic discretization of the physical state.
-        Uses MuJoCo qpos/qvel by default (more reliable than guessing indices in obs_vec).
-        """
         if self.cfg.use_mujoco_state and hasattr(self.env.unwrapped, "data"):
             data = self.env.unwrapped.data
-            qpos = data.qpos.ravel()
-            qvel = data.qvel.ravel()
-            x, y, z = float(qpos[0]), float(qpos[1]), float(qpos[2])
-            vx, vy = float(qvel[0]), float(qvel[1])
-        else:
-            # fallback: try from obs["observation"] (may exclude xy)
-            vec = obs["observation"] if isinstance(obs, dict) and "observation" in obs else np.asarray(obs)
-            vec = np.asarray(vec, dtype=np.float64).ravel()
-            # 这里无法可靠拿到 x,y，因此仅用 z 和速度做分桶（通用但信息少）
-            z = float(vec[0])  # if exclude_xy=True, qpos[2] is first element
-            vx = float(vec[-14])  # qvel[0]的位置取决于拼接方式，这里只是兜底
-            vy = 0.0
-            x = 0.0
-            y = 0.0
+            qpos = np.asarray(data.qpos, dtype=np.float64).ravel()
+            qvel = np.asarray(data.qvel, dtype=np.float64).ravel()
 
-        return (
-            _bin(x, self.cfg.bin_xy),
-            _bin(y, self.cfg.bin_xy),
-            _bin(z, self.cfg.bin_z),
-            _bin(vx, self.cfg.bin_v),
-            _bin(vy, self.cfg.bin_v),
-        )
+            # 通用：取前几个维度做分桶（对 PointMaze: qpos[0:2]=xy, qvel[0:2]=vxy）
+            x = float(qpos[0]) if qpos.size > 0 else 0.0
+            y = float(qpos[1]) if qpos.size > 1 else 0.0
+            z = float(qpos[2]) if qpos.size > 2 else 0.0
+            vx = float(qvel[0]) if qvel.size > 0 else 0.0
+            vy = float(qvel[1]) if qvel.size > 1 else 0.0
 
-    # -----------------
-    # simplified exploitation shaping: goal progress
-    # -----------------
+            return (
+                _bin(x, self.cfg.bin_xy),
+                _bin(y, self.cfg.bin_xy),
+                _bin(z, self.cfg.bin_z),
+                _bin(vx, self.cfg.bin_v),
+                _bin(vy, self.cfg.bin_v),
+            )
+
+        # fallback：直接从 observation 向量取前 k 维分桶（信息弱，但通用）
+        vec = obs.get("observation") if isinstance(obs, dict) else obs
+        vec = np.asarray(vec, dtype=np.float64).ravel()
+        k = int(max(0, min(self.cfg.obs_fallback_k, vec.size)))
+        # 用不同宽度：前两维按 xy，第三按 z，其余按 v（经验性兜底）
+        bins = []
+        for i in range(k):
+            w = self.cfg.bin_xy if i < 2 else (self.cfg.bin_z if i == 2 else self.cfg.bin_v)
+            bins.append(_bin(float(vec[i]), w))
+        return tuple(bins)
+
     @staticmethod
     def _goal_gap(obs: Any) -> float:
-        """
-        Generic goal gap for all tasks:
-        gap = |desired - achieved|
-        - speed task: desired is target_speed, achieved is xvel
-        - stand task: desired is target_height, achieved is z
-        - far task:   desired is target_dist, achieved is xy_norm
-        """
         if not (isinstance(obs, dict) and "achieved_goal" in obs and "desired_goal" in obs):
             return 0.0
-        achieved = float(np.asarray(obs["achieved_goal"]).ravel()[0])
-        desired = float(np.asarray(obs["desired_goal"]).ravel()[0])
-        return abs(desired - achieved)
+        achieved = np.asarray(obs["achieved_goal"], dtype=np.float64).ravel()
+        desired = np.asarray(obs["desired_goal"], dtype=np.float64).ravel()
+        if achieved.size == 0 or desired.size == 0:
+            return 0.0
+        m = min(achieved.size, desired.size)
+        return float(np.linalg.norm(achieved[:m] - desired[:m], ord=2))
+
+
+# 兼容旧名字（避免其他地方 import 失败）
+AntExploRSRewardWrapper = ExploRSRewardWrapper
