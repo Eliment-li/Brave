@@ -21,7 +21,7 @@ from cleanrl_utils.atari_wrappers import (
     NoopResetEnv,
 )
 
-from core.model.checkpoint import save_checkpoint
+from utils.checkpoint import save_checkpoint
 
 
 def make_env(env_id, idx, capture_video, run_name):

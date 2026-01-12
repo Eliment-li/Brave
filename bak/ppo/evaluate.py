@@ -3,7 +3,7 @@ import torch
 import torch.optim as optim
 
 from configs.ppo_args import PpoAtariArgs
-from core.model.checkpoint import load_checkpoint
+from utils.checkpoint import load_checkpoint
 from bak.ppo.ppo_mountain_car import Agent as TrainAgent, make_env
 
 

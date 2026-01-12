@@ -16,17 +16,16 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.noise import NormalActionNoise
 import swanlab
-from swanlab.env import is_windows
 
 from configs.base_args import get_root_path
-from core.brs.point_maze_brs_wrapper import PointMazeBRSRewardWrapper
+from brs import PointMazeBRSRewardWrapper
 # + ExploRS (generic)
 from application.ant.basic.wrappers.ant_explors_wrapper import ExploRSRewardWrapper, ExploRSConfig
-from envs.maze.point_maze import PointMazeEnv
 from utils.camera import FixedMujocoOffscreenRender
 from utils.screen import set_screen_config
 from utils.swanlab_callback import SwanLabCallback
-import envs.maze.point_maze
+
+
 @dataclass
 class Args:
     # env

@@ -4,7 +4,6 @@ from pathlib import Path
 import os
 
 from stable_baselines3.common.env_util import make_vec_env
-from swanlab.env import is_windows
 
 from application.ant.basic.wrappers.ant_explors_wrapper import AntExploRSRewardWrapper, ExploRSConfig
 from application.ant.basic.wrappers.brs_wrapper.v4 import AntBRSRewardWrapperV4
@@ -20,7 +19,7 @@ from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 
-from application.ant.basic.wrappers.ant_info_wrapper import AntTaskInfoWrapper
+from info_wrapper.ant_info_wrapper import AntTaskInfoWrapper
 
 from configs.base_args import get_root_path
 import swanlab
@@ -28,7 +27,6 @@ import swanlab
 from utils.screen import set_screen_config
 from utils.swanlab_callback import SwanLabCallback
 import tyro
-import  application.ant.basic.ant_tasks
 
 
 @dataclass

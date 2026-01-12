@@ -19,7 +19,7 @@ from torch.distributions.categorical import Categorical
 from configs.ppo_args import PpoAtariArgs
 from bak.ppo.brs_mountaincar_wrapper import BRSRewardWrapper
 
-from core.model.checkpoint import save_checkpoint
+from utils.checkpoint import save_checkpoint
 from configs.base_args import get_root_path
 
 args = tyro.cli(PpoAtariArgs)
