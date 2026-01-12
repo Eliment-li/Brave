@@ -24,14 +24,20 @@ from core.brs.ant_maze_brs_wrapper import AntMazeBRSRewardWrapper
 from utils.camera import FixedMujocoOffscreenRender
 from utils.swanlab_callback import SwanLabCallback
 
-# 可选：如果你后续也要给 AntMaze 加奖励 wrapper，可以在这里接入
 # from application.ant.basic.wrappers.ant_info_wrapper import OriginalRewardInfoWrapper
 
+# --- replace the current env var block with this ---
 if not is_windows():
-    os.environ.setdefault("MUJOCO_GL", "egl")
-    os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
-os.environ["SDL_VIDEODRIVER"] = "dummy"
+    # Desktop Ubuntu + monitor: prefer GLFW/GLX path to keep offscreen rgb_array working
+    os.environ.setdefault("MUJOCO_GL", "glfw")
+    # Only set PYOPENGL_PLATFORM when using egl/osmesa, not glfw
+    if os.environ.get("MUJOCO_GL") in ("egl", "osmesa"):
+        os.environ.setdefault("PYOPENGL_PLATFORM", os.environ["MUJOCO_GL"])
+    else:
+        os.environ.pop("PYOPENGL_PLATFORM", None)
 
+# Do not force dummy; it can break window/context init on desktop machines
+os.environ.pop("SDL_VIDEODRIVER", None)
 
 @dataclass
 class Args:
