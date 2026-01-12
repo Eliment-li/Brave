@@ -16,11 +16,11 @@ import torch.optim as optim
 import tyro
 from torch.distributions.categorical import Categorical
 
-from configs.ppo_args import PpoAtariArgs
+from bak.configs import PpoAtariArgs
 from bak.ppo.brs_mountaincar_wrapper import BRSRewardWrapper
 
 from utils.checkpoint import save_checkpoint
-from configs.base_args import get_root_path
+from bak.configs.base_args import get_root_path
 
 args = tyro.cli(PpoAtariArgs)
 args.finalize()

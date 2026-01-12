@@ -1,6 +1,6 @@
-/configs/private/*
+/bak/configs/private/*
 /private/
-/configs/private/private_args.py
+/bak/configs/private/private_args.py
 
 /.idea/
 *.idea/

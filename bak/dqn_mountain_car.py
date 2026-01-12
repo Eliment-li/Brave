@@ -12,8 +12,8 @@ import gymnasium as gym
 from gymnasium.spaces import Box, Discrete
 from gymnasium.wrappers import RecordEpisodeStatistics, RecordVideo
 import swanlab
-from configs.base_args import get_root_path
-from configs.dqn_args import DqnArgs
+from bak.configs.base_args import get_root_path
+from bak.configs.dqn_args import DqnArgs
 
 def one_hot(index, size):
     vec = np.zeros(size, dtype=np.float32)

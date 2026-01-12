@@ -12,7 +12,7 @@ import torch.optim as optim
 import tyro
 from torch.distributions.categorical import Categorical
 
-from configs.ppo_args import PpoAtariArgs
+from bak.configs import PpoAtariArgs
 from bak.rewardWrapper import BreakoutRewardWrapper
 from cleanrl_utils.atari_wrappers import (
     EpisodicLifeEnv,

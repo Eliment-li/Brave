@@ -3,8 +3,8 @@ from pathlib import Path
 
 import gymnasium as gym
 import numpy as np
-from typing import Callable, Tuple, Any
-from configs.ppo_args import PpoAtariArgs
+from typing import Tuple, Any
+from bak.configs import PpoAtariArgs
 import matplotlib.pyplot as plt
 args = PpoAtariArgs().finalize()
 class BreakoutRewardWrapper(gym.Wrapper):

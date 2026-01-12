@@ -1,10 +1,9 @@
-import os
 import time
 from pathlib import Path
 
 import torch
 
-from configs.base_args import get_root_path
+from bak.configs.base_args import get_root_path
 
 
 def _ensure_ckpt_dir(run_name: str) -> Path:
