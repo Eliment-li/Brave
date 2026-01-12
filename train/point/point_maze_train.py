@@ -25,7 +25,6 @@ from info_wrapper.point_maze_info_wrapper import PointMazeInfoWrapper
 from utils.camera import FixedMujocoOffscreenRender
 from utils.screen import set_screen_config
 from utils.swanlab_callback import SwanLabCallback
-import envs.maze.point_maze
 from envs.maze import maps as maze_maps
 
 @dataclass
@@ -36,8 +35,11 @@ class Args:
     total_timesteps: int = int(2e3)
     repeat: int = 1
     seed: int = -1
-    reward_mode: str = "standerd"  # standerd / brave / explors
-
+    reward_mode: str = "standerd"  # standerd / brave / explors /rnd
+    max_episode_steps:int =200
+    #brave
+    global_bonus:float =  5
+    use_global_max_bonus:bool = True
     # maze map
     maze_map_name: str = "U_MAZE"              # 训练用地图名（见 envs/maze/maps.py: MAPS）
     eval_maze_map_name: str = ""              # 评估用地图名；空字符串表示复用训练地图
@@ -112,7 +114,7 @@ def add_reward_wrapper(env, args: Args):
     print(f"Adding reward wrapper: {args.reward_mode}")
     match args.reward_mode:
         case "brave":
-            env = PointMazeBRSRewardWrapper(env)
+            env = PointMazeBRSRewardWrapper(env,use_global_max_bonus=args.use_global_max_bonus,global_bonus=args.global_bonus)
         case "explors":
             cfg = ExploRSConfig(
                 lmbd=args.explors_lmbd,
@@ -150,6 +152,7 @@ def train_and_evaluate(args: Args):
     def make_env():
         # 用自实现 PointMazeEnv（不再用 gym.make(args.env_id, ...)）
         env = gym.make(args.env_id, reward_type=args.reward_type, maze_map=train_maze_map)
+
         env = PointMazeInfoWrapper(env)
         env = add_reward_wrapper(env, args)
         env = Monitor(env, filename=None, allow_early_resets=True)
@@ -205,6 +208,8 @@ def train_and_evaluate(args: Args):
             reward_type=args.reward_type,
             maze_map=eval_maze_map,
         )
+        # 先 reset，保证 goal/obs 等就绪（对依赖 _last_obs/GoalEnv dict obs 的 wrapper 更稳）
+
         base_env = PointMazeInfoWrapper(base_env)
         base_env = add_reward_wrapper(base_env, args)
         base_env = Monitor(base_env, filename=None, allow_early_resets=True)
@@ -218,6 +223,7 @@ def train_and_evaluate(args: Args):
                 episode_trigger=lambda ep_id: ep_id == 0,  # 避免每个 episode 都录制
                 name_prefix=f"eval_{args.experiment_name}",
             )
+        base_env.reset(seed=args.seed)
         return base_env
 
     eval_env = make_eval_env()
@@ -241,10 +247,15 @@ def train_and_evaluate(args: Args):
 
 
 if __name__ == "__main__":
-    set_screen_config()
-    gym.register_envs(gymnasium_robotics)
+    #get args
     args = tyro.cli(Args)
     args.finalize()
+    #set env recoder
+    set_screen_config()
+    #register envs
+    from gymnasium.envs.registration import register,register_envs
+    register_envs(gymnasium_robotics)
+    register(id="PointMazeEnv-v0", entry_point="envs.maze.point_maze:PointMazeEnv", max_episode_steps=args.max_episode_steps)
 
     print("torch num_threads:", torch.get_num_threads())
     print("torch interop:", torch.get_num_interop_threads())
@@ -254,5 +265,3 @@ if __name__ == "__main__":
         train_and_evaluate(args)
         args.reset_seed()
         time.sleep(10)
-
-# python -m train.point.train_point_maze --total_timesteps 1000000 --track --reward-mode explors

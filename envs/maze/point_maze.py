@@ -214,5 +214,3 @@ class PointMazeEnv(MazeEnv, EzPickle):
     def data(self):
         return self.point_env.data
 
-from gymnasium.envs.registration import register
-register(id="PointMazeEnv-v0", entry_point="envs.maze.point_maze:PointMazeEnv", max_episode_steps=1000)

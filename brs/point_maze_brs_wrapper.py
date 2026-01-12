@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import gymnasium as gym
 
@@ -11,6 +13,8 @@ class PointMazeBRSRewardWrapper(BRSRewardWrapperBase):
         gamma: float = 0.99,
         beta: float = 1.1,
         min_bonus: float = 0.01,
+        use_global_max_bonus: bool = None,
+        global_bonus: Optional[float] = None,
     ):
         def _last_obs(e: gym.Env):
             return getattr(e.unwrapped, "_last_obs", None)
@@ -79,6 +83,8 @@ class PointMazeBRSRewardWrapper(BRSRewardWrapperBase):
             gamma=gamma,
             beta=beta,
             min_bonus=min_bonus,
+            use_global_max_bonus = use_global_max_bonus,
+            global_bonus = global_bonus,
         )
 
     def reset(self, **kwargs):
