@@ -20,11 +20,13 @@ import swanlab
 from algos.explors.ant_explors_wrapper import ExploRSConfig, ExploRSRewardWrapper
 from bak.configs.base_args import get_root_path
 from brs.point_maze_brs_wrapper import PointMazeBRSRewardWrapper
+from info_wrapper.point_maze_info_wrapper import PointMazeInfoWrapper
 # + ExploRS (generic)
 from utils.camera import FixedMujocoOffscreenRender
 from utils.screen import set_screen_config
 from utils.swanlab_callback import SwanLabCallback
-
+import envs.maze.point_maze
+from envs.maze import maps as maze_maps
 
 @dataclass
 class Args:
@@ -35,6 +37,10 @@ class Args:
     repeat: int = 1
     seed: int = -1
     reward_mode: str = "standerd"  # standerd / brave / explors
+
+    # maze map
+    maze_map_name: str = "U_MAZE"              # 训练用地图名（见 envs/maze/maps.py: MAPS）
+    eval_maze_map_name: str = ""              # 评估用地图名；空字符串表示复用训练地图
 
     # --- ExploRS config (reward shaping) ---
     explors_lmbd: float = 1.0
@@ -138,9 +144,13 @@ def train_and_evaluate(args: Args):
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
+    train_maze_map = maze_maps.get_map(args.maze_map_name)
+    eval_maze_map = maze_maps.get_map(args.eval_maze_map_name) if args.eval_maze_map_name else train_maze_map
+
     def make_env():
         # 用自实现 PointMazeEnv（不再用 gym.make(args.env_id, ...)）
-        env = gym.make(args.env_id, reward_type=args.reward_type)
+        env = gym.make(args.env_id, reward_type=args.reward_type, maze_map=train_maze_map)
+        env = PointMazeInfoWrapper(env)
         env = add_reward_wrapper(env, args)
         env = Monitor(env, filename=None, allow_early_resets=True)
         env.reset(seed=args.seed)
@@ -189,10 +199,13 @@ def train_and_evaluate(args: Args):
 
     def make_eval_env():
         # 注意：PointMaze 自实现 env 若 rgb_array 渲染实现有阻塞，evaluate_policy 会卡死在 render()
-        base_env = gym.make(args.env_id,
+        base_env = gym.make(
+            args.env_id,
             render_mode=args.eval_render_mode,
             reward_type=args.reward_type,
+            maze_map=eval_maze_map,
         )
+        base_env = PointMazeInfoWrapper(base_env)
         base_env = add_reward_wrapper(base_env, args)
         base_env = Monitor(base_env, filename=None, allow_early_resets=True)
 

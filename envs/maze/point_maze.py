@@ -164,7 +164,7 @@ class PointMazeEnv(MazeEnv, EzPickle):
 
         obs, info = self.point_env.reset(seed=seed)
         obs_dict = self._get_obs(obs)
-        info["success"] = bool(
+        info["is_success"] = bool(
             np.linalg.norm(obs_dict["achieved_goal"] - self.goal) <= 0.45
         )
 
@@ -177,7 +177,7 @@ class PointMazeEnv(MazeEnv, EzPickle):
         reward = self.compute_reward(obs_dict["achieved_goal"], self.goal, info)
         terminated = self.compute_terminated(obs_dict["achieved_goal"], self.goal, info)
         truncated = self.compute_truncated(obs_dict["achieved_goal"], self.goal, info)
-        info["success"] = bool(
+        info["is_success"] = bool(
             np.linalg.norm(obs_dict["achieved_goal"] - self.goal) <= 0.45
         )
 
@@ -215,4 +215,4 @@ class PointMazeEnv(MazeEnv, EzPickle):
         return self.point_env.data
 
 from gymnasium.envs.registration import register
-register(id="PointMazeEnv-v0", entry_point="envs.maze.point_maze:PointMazeEnv", max_episode_steps=2500)
+register(id="PointMazeEnv-v0", entry_point="envs.maze.point_maze:PointMazeEnv", max_episode_steps=1000)
