@@ -22,22 +22,10 @@ from application.ant.basic.wrappers.ant_info_wrapper import AntMazeInfoWrapper
 from configs.base_args import get_root_path
 from core.brs.ant_maze_brs_wrapper import AntMazeBRSRewardWrapper
 from utils.camera import FixedMujocoOffscreenRender
+from utils.screen import set_screen_config
 from utils.swanlab_callback import SwanLabCallback
 
 # from application.ant.basic.wrappers.ant_info_wrapper import OriginalRewardInfoWrapper
-
-# --- replace the current env var block with this ---
-if not is_windows():
-    # Desktop Ubuntu + monitor: prefer GLFW/GLX path to keep offscreen rgb_array working
-    os.environ.setdefault("MUJOCO_GL", "glfw")
-    # Only set PYOPENGL_PLATFORM when using egl/osmesa, not glfw
-    if os.environ.get("MUJOCO_GL") in ("egl", "osmesa"):
-        os.environ.setdefault("PYOPENGL_PLATFORM", os.environ["MUJOCO_GL"])
-    else:
-        os.environ.pop("PYOPENGL_PLATFORM", None)
-
-# Do not force dummy; it can break window/context init on desktop machines
-os.environ.pop("SDL_VIDEODRIVER", None)
 
 @dataclass
 class Args:
@@ -237,6 +225,8 @@ def train_and_evaluate(args: Args):
 
 
 if __name__ == "__main__":
+
+    set_screen_config()
     gym.register_envs(gymnasium_robotics)
     args = tyro.cli(Args)
     args.finalize()

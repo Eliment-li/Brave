@@ -24,15 +24,9 @@ from core.brs.point_maze_brs_wrapper import PointMazeBRSRewardWrapper
 from application.ant.basic.wrappers.ant_explors_wrapper import ExploRSRewardWrapper, ExploRSConfig
 from envs.maze.point_maze import PointMazeEnv
 from utils.camera import FixedMujocoOffscreenRender
+from utils.screen import set_screen_config
 from utils.swanlab_callback import SwanLabCallback
 import envs.maze.point_maze
-
-if not is_windows():
-    os.environ.setdefault("MUJOCO_GL", "egl")
-    os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
-os.environ["SDL_VIDEODRIVER"] = "dummy"
-
-
 @dataclass
 class Args:
     # env
@@ -92,7 +86,7 @@ class Args:
             torch.set_num_interop_threads(2)
 
         safe_env = self.env_id.replace("/", "_")
-        self.experiment_name = safe_env + "_" + arrow.now().format("MMDD_HHmm")
+        self.experiment_name = safe_env + "_" + arrow.now().format("MMDD_HHmm")+"_"+self.reward_mode
         if self.seed == -1:
             self.reset_seed()
 
@@ -235,6 +229,7 @@ def train_and_evaluate(args: Args):
 
 
 if __name__ == "__main__":
+    set_screen_config()
     gym.register_envs(gymnasium_robotics)
     args = tyro.cli(Args)
     args.finalize()

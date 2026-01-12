@@ -24,14 +24,11 @@ from application.ant.basic.wrappers.ant_info_wrapper import AntTaskInfoWrapper
 
 from configs.base_args import get_root_path
 import swanlab
+
+from utils.screen import set_screen_config
 from utils.swanlab_callback import SwanLabCallback
 import tyro
 import  application.ant.basic.ant_tasks
-if not is_windows():
-    os.environ.setdefault("MUJOCO_GL", "egl")
-    os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
-
-os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 
 @dataclass
@@ -297,6 +294,7 @@ def train_and_evaluate(args):
 
 
 if __name__ == "__main__":
+    set_screen_config()
     args = tyro.cli(Args)
     args.finalize()
 
