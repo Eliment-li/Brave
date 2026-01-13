@@ -20,11 +20,31 @@ U_MAZE_SINGLE_EVAL = [[1, 1, 1, 1, 1],
                [1, G, 0, 0, 1],
                [1, 1, 1, 1, 1]]
 
+
+
+U5_MAZE = [[1, 1, 1, 1, 1, 1, 1, 1],
+           [1, G, G, G, G, G, G, 1],
+           [1, R, 1, 1, 1, 1, G, 1],
+           [1, 1, 1, 1, 1, 1, G, 1],
+           [1, G, 1, 1, 1, 1, G, 1],
+           [1, G, G, G, G, G, G, 1],
+           [1, 1, 1, 1, 1, 1, 1, 1]]
+
+U5_MAZE_EVAL = [[1, 1, 1, 1, 1, 1, 1, 1],
+                [1, 0, 0, 0, 0, 0, 0, 1],
+                [1, R, 1, 1, 1, 1, 0, 1],
+                [1, 1, 1, 1, 1, 1, 0, 1],
+                [1, G, 1, 1, 1, 1, G, 1],
+                [1, G, G, G, G, G, G, 1],
+                [1, 1, 1, 1, 1, 1, 1, 1]]
+
 # --- map registry (name -> map) ---
 MAPS = {
     "U_MAZE": U_MAZE,
     "U_MAZE_EVAL": U_MAZE_EVAL,
     "U_MAZE_SINGLE_EVAL": U_MAZE_SINGLE_EVAL,
+    "U5_MAZE": U5_MAZE,
+    "U5_MAZE_EVAL": U5_MAZE_EVAL,
 }
 
 def get_map(name: str):
