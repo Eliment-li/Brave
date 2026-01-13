@@ -207,7 +207,7 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         truncated = False  # handled by TimeLimit wrapper / max_episode_steps in registration
 
         achieved, desired = obs["achieved_goal"], obs["desired_goal"]
-        self.state_sw.next(achieved[0])
+        self.state_sw.add(achieved[0])
 
         metric_now = self._task_metric(achieved, desired)
         #self.metric_sw.next(metric_now)
@@ -269,7 +269,3 @@ class AntFar(AntTaskEnv):
         super().__init__(task="far", **kwargs)
 
 
-# -------- registration (import this module once) --------
-register(id="AntStand-v0", entry_point="train.ant.basic.ant_tasks:AntStand", max_episode_steps=200)
-register(id="AntSpeed-v0", entry_point="train.ant.basic.ant_tasks:AntSpeed", max_episode_steps=200)
-register(id="AntFar-v0",   entry_point="train.ant.basic.ant_tasks:AntFar",   max_episode_steps=200)

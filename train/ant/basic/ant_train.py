@@ -3,6 +3,7 @@ from dataclasses import dataclass, asdict, field
 from pathlib import Path
 import os
 
+from gymnasium import register
 from stable_baselines3.common.env_util import make_vec_env
 
 from algos.explors.ant_explors_wrapper import AntExploRSRewardWrapper, ExploRSConfig
@@ -50,6 +51,7 @@ class Args:
     ctrl_cost_weight: float = 0.5
     early_break:bool = True
     healthy_reward:float = 1.0
+    max_episode_steps:int =200
     #swanlab
     swanlab_project: str = "Brave_Antv4"#final project name = swanlab_project+task
     swanlab_workspace: str = "Eliment-li"
@@ -294,6 +296,10 @@ def train_and_evaluate(args):
 if __name__ == "__main__":
     set_screen_config()
     args = tyro.cli(Args)
+    # -------- registration (import this module once) --------
+    register(id="AntStand-v0", entry_point="envs.ant.ant_tasks:AntStand", max_episode_steps=args.max_episode_steps)
+    register(id="AntSpeed-v0", entry_point="envs.ant.ant_tasks:AntSpeed", max_episode_steps=args.max_episode_steps)
+    register(id="AntFar-v0", entry_point="envs.ant.ant_tasks:AntFar", max_episode_steps=args.max_episode_steps)
     args.finalize()
 
     print("torch num_threads:", torch.get_num_threads())
