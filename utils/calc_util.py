@@ -160,7 +160,7 @@ class SlideWindow:
         self.queue = deque()
         self.total = 0.0
 
-    def next(self, val:float)->float:
+    def add(self, val:float)->float:
         if len(self.queue) == self.size:
             self.total -= self.queue.popleft()
         self.queue.append(val)
