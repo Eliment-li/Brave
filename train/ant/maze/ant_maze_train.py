@@ -17,6 +17,7 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.noise import NormalActionNoise
 import swanlab
 
+from brs.ant_maze_brs_wrapper import AntMazeBRSRewardWrapper
 from info_wrapper.ant_info_wrapper import AntMazeInfoWrapper
 from bak.configs.base_args import get_root_path
 from utils.camera import FixedMujocoOffscreenRender

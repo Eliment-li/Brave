@@ -20,9 +20,9 @@ class BRSRewardWrapperBase(gym.Wrapper):
         metric_fn: MetricFn,
         metric_name: str = "metric",
         info_fn: Optional[InfoFn] = None,
-        gamma: float = 0.99,
-        beta: float = 1.1,
-        min_bonus: float = 0.01,
+        gamma: float = None,
+        beta: float = None,
+        min_bonus: float =None,
         use_global_max_bonus: bool = None,
         global_bonus: Optional[float] = None,
     ):
@@ -81,14 +81,11 @@ class BRSRewardWrapperBase(gym.Wrapper):
 
             # episode 提升奖励（原逻辑）
             bonus += self.beta * (self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus
-
+            bonus = max(bonus,reward)
             # global 提升奖励（v5 风格：在 episode 提升的前提下叠加）
             if self.use_global_max_bonus and metric > self.global_max:
                 self.global_max = metric
-                if self.global_bonus is None:
-                    bonus += self.beta * (self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus
-                else:
-                    bonus += float(self.global_bonus)
+                bonus += float(self.global_bonus)
 
             reward = bonus
             self.rdcr = self.gamma * self.rdcr + bonus
@@ -126,8 +123,8 @@ class BRSRewardWrapperBaseV2(gym.Wrapper):
         metric_name: str = "metric",
         info_fn: Optional[InfoFn] = None,
         gamma: float = 0.99,
-        beta: float = 1.1,
-        min_bonus: float = 0.01,
+        beta: float = 1.01,
+        min_bonus: float = 0.1,
         use_global_max_bonus: bool = None,
         global_bonus: Optional[float] = None,
     ):

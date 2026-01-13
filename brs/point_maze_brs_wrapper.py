@@ -3,16 +3,16 @@ from typing import Optional
 import numpy as np
 import gymnasium as gym
 
-from brs.brs_wrapper import BRSRewardWrapperBase,BRSRewardWrapperBaseV2
+from brs.brs_wrapper import BRSRewardWrapperBase
 
 
-class PointMazeBRSRewardWrapper(BRSRewardWrapperBaseV2):
+class PointMazeBRSRewardWrapper(BRSRewardWrapperBase):
     def __init__(
         self,
         env: gym.Env,
         gamma: float = 0.99,
-        beta: float = 1.1,
-        min_bonus: float = 0.01,
+        beta: float = 1.01,
+        min_bonus: float = 1,
         use_global_max_bonus: bool = None,
         global_bonus: Optional[float] = None,
     ):
