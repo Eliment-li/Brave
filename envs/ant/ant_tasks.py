@@ -219,7 +219,7 @@ class AntTaskEnv(MujocoEnv, utils.EzPickle):
         #compute reward
         match self.reward_type:
             case "sparse":
-                reward = 0.0 if success else -1.0
+                reward =500.0 if success else -1.0
             case "dense":
                 reward = float(self._task_metric(achieved, desired) + self.healthy_reward - ctrl_cost)
             case _:

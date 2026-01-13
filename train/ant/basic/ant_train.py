@@ -44,7 +44,7 @@ class Args:
     #ExploRS
     #env
     reward_type:str = 'dense'
-    target_speed: float = 4.0
+    target_speed: float = 3.5
     target_height:float = 0.9
     target_dist:float = 5
     terminate_when_unhealthy: bool = True
