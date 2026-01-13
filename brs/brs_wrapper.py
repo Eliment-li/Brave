@@ -183,7 +183,7 @@ class BRSRewardWrapperBaseV2(gym.Wrapper):
         metric = float(self.metric_fn(self.env))
         bonus = 0.0
         self.recent_metrics.add(metric)
-        if metric > self.self.recent_metrics.average:
+        if metric > self.recent_metrics.average:
             self.episode_max = metric
 
             # episode 提升奖励（原逻辑）
