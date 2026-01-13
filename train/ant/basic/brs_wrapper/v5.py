@@ -46,8 +46,8 @@ class AntBRSRewardWrapperV5(gym.Wrapper):
         bonus = 0.0
         if metric > self.episode_max:
             self.episode_max = metric
-            bonus+=(self.beta*(self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus)
-
+            bonus =(self.beta*(self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus)
+            bonus = max(reward,bonus)
             #global
             if metric > self.global_max:
                 self.global_max = metric
