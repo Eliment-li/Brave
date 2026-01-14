@@ -9,7 +9,7 @@ class AntBRSRewardWrapperV5(gym.Wrapper):
         self,
         env: gym.Env,
         gamma: float = 0.99,
-        beta: float = 1.1,
+        beta: float = 1.001,
         min_bonus: float = 0.1,
     ):
         super().__init__(env)
@@ -25,8 +25,10 @@ class AntBRSRewardWrapperV5(gym.Wrapper):
         self.rdcr = 0.0
         self.rdcr_max = 0.0
 
+
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
+        self.brs_trigger_count=1
         info = dict(info or {})
         self.episode_max = self._current_metric()
         self.rdcr = 0.0
@@ -38,6 +40,7 @@ class AntBRSRewardWrapperV5(gym.Wrapper):
         return obs, info
 
     def step(self, action):
+        self.episode_step +=1
         obs, reward, terminated, truncated, info = self.env.step(action)
         info = dict(info or {})
         metric = self._current_metric()
@@ -46,13 +49,16 @@ class AntBRSRewardWrapperV5(gym.Wrapper):
         bonus = 0.0
         if metric > self.episode_max:
             self.episode_max = metric
-            bonus =(self.beta*(self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus)
+            self.brs_trigger_count +=1
+            beta = 1+(1/2**(self.brs_trigger_count))
+            bonus =(beta*(self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus/2**self.brs_trigger_count)
+            #bonus = beta*(self.rdcr_max - self.gamma * self.rdcr)
             bonus = max(reward,bonus)
             #global
-            if metric > self.global_max:
-                self.global_max = metric
-                #extra_bonus = self.beta*(self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus
-                bonus +=20
+            # if metric > self.global_max:
+            #     self.global_max = metric
+            #     #extra_bonus = self.beta*(self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus
+            #     bonus +=20
 
             reward = bonus
             self.rdcr = self.gamma * self.rdcr + reward
