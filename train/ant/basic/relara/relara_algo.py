@@ -207,14 +207,23 @@ class ReLaraAlgo:
         self.ra_target_frequency = int(cfg.ra_target_frequency)
         self.ra_tau = float(cfg.ra_tau)
         self.success_buffer: deque[float] = deque(maxlen=100)
-        #for original/ep_rew_mean
-        self._current_episode_reward: float = 0.0
-        self._ep_rew_buffer: deque[float] = deque(maxlen=100)
+
+        # episode stats buffers (window=100, SB3-like)
+        self._current_episode_reward_env: float = 0.0
+        self._ep_rew_env_buffer: deque[float] = deque(maxlen=100)
+
+        self._current_episode_reward_pro: float = 0.0
+        self._ep_rew_pro_buffer: deque[float] = deque(maxlen=100)
+
+        self._current_episode_len: int = 0
+        self._ep_len_buffer: deque[int] = deque(maxlen=100)
 
     def learn(self, total_timesteps: int = int(1e6), pa_learning_starts: int = int(1e4), ra_learning_starts: int = int(5e3)):
         obs, _info = self.env.reset(seed=self.seed)
-        # for original/ep_rew_mean
-        self._current_episode_reward = 0.0
+
+        self._current_episode_reward_env = 0.0
+        self._current_episode_reward_pro = 0.0
+        self._current_episode_len = 0
 
         for global_step in range(int(total_timesteps)):
             # first action
@@ -226,28 +235,18 @@ class ReLaraAlgo:
 
             # sample / propose reward
             if global_step < int(ra_learning_starts):
-                #random sample, haven't use RA network yet
                 reward_pro = self.proposed_reward_space.sample()
             else:
-                #use RA network to propose reward
                 reward_pro, _, _ = self.ra_actor.get_action(torch.tensor(np.expand_dims(obs_ra, axis=0)).to(self.device))
-                #change tensor value to numpy
                 reward_pro = reward_pro.detach().cpu().numpy()[0]
 
             next_obs, reward_env, terminated, truncated, info = self.env.step(action)
             done = bool(terminated or truncated)
 
-            #for log
-            #relara is not compatible with OriginalRewardInfoWrapper,in OriginalRewardInfoWrapper
-            #we can not get standerd_reward, because the reward_pro is trerated as reward for env
-            #so we calc the ep_rew_mean here manually
-            self._current_episode_reward += float(reward_env)
-            # data = self.env.unwrapped.data
-            # qpos = data.qpos.ravel()
-            # qvel = data.qvel.ravel()
-            # stand = float(qpos[2])
-            # speed = float(qvel[0])
-            # far = float(np.linalg.norm(qpos[:2]))
+            # per-step accumulation (env + pro + len)
+            self._current_episode_reward_env += float(reward_env)
+            self._current_episode_reward_pro += float(np.asarray(reward_pro).reshape(-1)[0])
+            self._current_episode_len += 1
 
             log_data = {
                 r"original/standerd_reward": reward_env,
@@ -256,12 +255,20 @@ class ReLaraAlgo:
                 # r"metric/far": far,
                 # r"metric/stand": stand,
             }
-            # for original/ep_rew_mean
-            ep_rew_mean = float(np.mean(self._ep_rew_buffer)) if self._ep_rew_buffer else None
-            if ep_rew_mean is not None:
-                log_data[r"original/ep_rew_mean"] = ep_rew_mean
-            swanlab.log(log_data, step=global_step)
 
+            # means from completed episodes
+            original_ep_rew_mean = float(np.mean(self._ep_rew_env_buffer)) if self._ep_rew_env_buffer else None
+            rollout_ep_rew_mean = float(np.mean(self._ep_rew_pro_buffer)) if self._ep_rew_pro_buffer else None
+            rollout_ep_len_mean = float(np.mean(self._ep_len_buffer)) if self._ep_len_buffer else None
+
+            if original_ep_rew_mean is not None:
+                log_data[r"original/ep_rew_mean"] = original_ep_rew_mean
+            if rollout_ep_rew_mean is not None:
+                log_data[r"rollout/ep_rew_mean"] = rollout_ep_rew_mean
+            if rollout_ep_len_mean is not None:
+                log_data[r"rollout/ep_len_mean"] = rollout_ep_len_mean
+
+            swanlab.log(log_data, step=global_step)
 
             # PA stores env reward only
             self.pa_replay_buffer.add(obs, next_obs, action, reward_env, done, info)
@@ -269,14 +276,21 @@ class ReLaraAlgo:
             if not done:
                 obs = next_obs
             else:
-                # 记录 rollout 成功率
-                self._ep_rew_buffer.append(self._current_episode_reward)
-                self._current_episode_reward = 0.0
+                # push completed episode stats into buffers (ONCE)
+                self._ep_rew_env_buffer.append(float(self._current_episode_reward_env))
+                self._ep_rew_pro_buffer.append(float(self._current_episode_reward_pro))
+                self._ep_len_buffer.append(int(self._current_episode_len))
+
+                self._current_episode_reward_env = 0.0
+                self._current_episode_reward_pro = 0.0
+                self._current_episode_len = 0
+
                 success = self._extract_success(info)
                 if success is not None:
                     self.success_buffer.append(success)
                     success_rate = float(np.mean(self.success_buffer))
                     swanlab.log({"rollout/success_rate": success_rate}, step=global_step)
+
                 # episode stats expected from RecordEpisodeStatistics
                 if isinstance(info, dict) and "episode" in info:
                     # self.writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
