@@ -7,6 +7,7 @@ import numpy as np
 import swanlab
 import torch
 import tyro
+from gymnasium import register
 from stable_baselines3.common.monitor import Monitor
 
 from info_wrapper.ant_info_wrapper import AntTaskInfoWrapper
@@ -26,7 +27,7 @@ class Args:
     task: str = ""  # speed, far, stand
     # task config
     reward_type: str = "dense"
-    speed_target: float = 4.0
+    speed_target: float = 3.5
     height_target: float = 0.9
     dist_target: float = 5.0
     terminate_when_unhealthy: bool = True
@@ -53,6 +54,7 @@ class Args:
     repeat:int = 1
 
     num_threads:int = -1
+    max_episode_steps:int=200
 
     def reset_seed(self):
         self.seed = torch.randint(0, 10000, (1,)).item()
@@ -132,6 +134,9 @@ def main(args: Args):
 if __name__ == "__main__":
     args = tyro.cli(Args)
     args.finalize()
+    register(id="AntStand-v0", entry_point="envs.ant.ant_tasks:AntStand", max_episode_steps=args.max_episode_steps)
+    register(id="AntSpeed-v0", entry_point="envs.ant.ant_tasks:AntSpeed", max_episode_steps=args.max_episode_steps)
+    register(id="AntFar-v0", entry_point="envs.ant.ant_tasks:AntFar", max_episode_steps=args.max_episode_steps)
     print("torch num_threads:", torch.get_num_threads())
     print("torch interop:", torch.get_num_interop_threads())
     print("OMP_NUM_THREADS:", os.environ.get("OMP_NUM_THREADS"))
