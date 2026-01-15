@@ -146,7 +146,7 @@ class BRSRewardWrapperBaseV2(gym.Wrapper):
         self.rdcr_max = 0.0
 
         self.recent_metrics= SlideWindow(size=1000)
-
+        self.brs_trigger_count = 1  # v5: per-episode trigger counter
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
@@ -173,30 +173,37 @@ class BRSRewardWrapperBaseV2(gym.Wrapper):
             # 兼容旧签名：第三个参数仍传 episode max（原 metric_max 语义）
             info.update(dict(self.info_fn(self.env, metric, self.episode_max) or {}))
 
+        self.brs_trigger_count = 1  # v5: reset counter each episode
+
         return obs, info
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         metric = float(self.metric_fn(self.env))
         bonus = 0.0
+
+        # v5 keeps episode_max trigger with a small threshold; keep recent_metrics only for logging/compat
         self.recent_metrics.add(metric)
-        if metric > self.recent_metrics.average:
+
+        # v5 trigger condition
+        if (metric - self.episode_max) > 0.01:
             self.episode_max = metric
 
-            # episode 提升奖励（原逻辑）
-            bonus += self.beta * (self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus
+            # v5 dynamic beta + decaying min_bonus term
+            beta_dyn = 1.0 + (1.0 / (2.0 ** self.brs_trigger_count))
+            bonus = (beta_dyn * (self.rdcr_max - self.gamma * self.rdcr)) + (self.min_bonus / self.brs_trigger_count)
 
-            # global 提升奖励（v5 风格：在 episode 提升的前提下叠加）
+            # v5 lower bound
+            bonus = max(reward, bonus)
+
+            # v5 global bonus: +20 when surpassing global max
             if self.use_global_max_bonus and metric > self.global_max:
                 self.global_max = metric
-                if self.global_bonus is None:
-                    bonus += self.beta * (self.rdcr_max - self.gamma * self.rdcr) + self.min_bonus
-                else:
-                    bonus += float(self.global_bonus)
+                bonus += 20.0
 
             reward = bonus
-            self.rdcr = self.gamma * self.rdcr + bonus
-            assert self.rdcr > self.rdcr_max, f"rdcr did not increase: {self.rdcr} <= {self.rdcr_max}"
+            self.rdcr = self.gamma * self.rdcr + reward
+            self.brs_trigger_count += 1
         else:
             self.rdcr = self.gamma * self.rdcr + reward
 
@@ -210,7 +217,6 @@ class BRSRewardWrapperBaseV2(gym.Wrapper):
 
         info[f"metric_episode_max_{self.metric_name}"] = self.episode_max
         info[f"metric_global_max_{self.metric_name}"] = self.global_max
-        # 兼容旧字段
         info[f"metric_max_{self.metric_name}"] = self.episode_max
 
         if self.info_fn is not None:

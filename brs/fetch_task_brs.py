@@ -1,10 +1,10 @@
 import numpy as np
 import gymnasium as gym
 
-from brs.brs_wrapper import BRSRewardWrapperBase
+from brs.brs_wrapper import BRSRewardWrapperBase, BRSRewardWrapperBaseV2
 
 
-class FetchTaskBRSRewardWrapper(BRSRewardWrapperBase):
+class FetchTaskBRSRewardWrapper(BRSRewardWrapperBaseV2):
     """
     一个 wrapper 覆盖 FetchReach / FetchPush：
     - metric 统一用 goal distance 的相反数（越大越好）
