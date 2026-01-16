@@ -46,7 +46,7 @@ class Args:
     video_dir: str = get_root_path() + "/results/videos/Fetch"
 
     # logging
-    swanlab_project: str = "Brave_FetchReach"
+    swanlab_project: str = "Brave_Fetch"
     swanlab_workspace: str = "Eliment-li"
     swanlab_group: str = ""
     tags: list[str] = field(default_factory=list)
@@ -75,11 +75,15 @@ class Args:
         if self.seed == -1:
             self.reset_seed()
 
+        if self.task == 'reach':
+            self.env_id='FetchReach-v4'
+        elif self.task=='push':
+            self.env_id='FetchPush-v4'
         safe_env = self.env_id.replace("/", "_")
         self.experiment_name = safe_env + "_" + arrow.now().format("MMDD_HHmm")
         self.experiment_name += ('_' + self.reward_mode)
         self.swanlab_group = self.reward_mode
-
+        self.swanlab_project = self.swanlab_project + '_' + self.task
         # tags & dirs
         if self.tags:
             parsed = []
