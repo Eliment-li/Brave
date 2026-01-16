@@ -186,7 +186,7 @@ class BRSRewardWrapperBaseV2(gym.Wrapper):
         self.recent_metrics.add(metric)
 
         # v5 trigger condition
-        if (metric - self.episode_max) > 0.01:
+        if (metric - self.episode_max) > 0:
             self.episode_max = metric
 
             # v5 dynamic beta + decaying min_bonus term
