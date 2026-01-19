@@ -37,6 +37,7 @@ def get_base_fetch_env(RobotEnvClass: Union[MujocoPyRobotEnv, MujocoRobotEnv]):
             target_range,
             distance_threshold,
             reward_type,
+            truncate_on_success: bool = True,
             **kwargs,
         ):
             """Initializes a new Fetch environment.
@@ -65,6 +66,7 @@ def get_base_fetch_env(RobotEnvClass: Union[MujocoPyRobotEnv, MujocoRobotEnv]):
             self.target_range = target_range
             self.distance_threshold = distance_threshold
             self.reward_type = reward_type
+            self.truncate_on_success = truncate_on_success
 
             super().__init__(n_actions=4, **kwargs)
 
@@ -78,6 +80,17 @@ def get_base_fetch_env(RobotEnvClass: Union[MujocoPyRobotEnv, MujocoRobotEnv]):
                 return -(d > self.distance_threshold).astype(np.float32)
             else:
                 return -d
+
+        def step(self, action):
+            obs, reward, terminated, truncated, info = super().step(action)
+            if self.truncate_on_success:
+                achieved_goal = obs.get("achieved_goal")
+                desired_goal = obs.get("desired_goal", self.goal)
+                success = float(self._is_success(achieved_goal, desired_goal))
+                info["is_success"] = success
+                if success :
+                    truncated = True
+            return obs, reward, terminated, truncated, info
 
         # RobotEnv methods
         # ----------------------------
