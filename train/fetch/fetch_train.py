@@ -50,6 +50,10 @@ class Args:
     swanlab_workspace: str = "Eliment-li"
     swanlab_group: str = ""
     tags: list[str] = field(default_factory=list)
+    #brave
+    # brave
+    global_bonus: float = 10
+    use_global_max_bonus: bool = True
 
     # TD3 Hyperparameters
     learning_rate: float = 1e-4
@@ -76,9 +80,9 @@ class Args:
             self.reset_seed()
 
         if self.task == 'reach':
-            self.env_id='FetchReach-v4'
+            self.env_id='Reach'
         elif self.task=='push':
-            self.env_id='FetchPush-v4'
+            self.env_id='Push'
         safe_env = self.env_id.replace("/", "_")
         self.experiment_name = safe_env + "_" + arrow.now().format("MMDD_HHmm")
         self.experiment_name += ('_' + self.reward_mode)
@@ -114,7 +118,9 @@ def add_reward_wrapper(env, args):
     print(f'Adding reward wrapper: {args.reward_mode}')
     match args.reward_mode:
         case 'brave':
-            env = FetchTaskBRSRewardWrapper(env,task=args.task)
+            env = FetchTaskBRSRewardWrapper(env,task=args.task,
+                                            use_global_max_bonus=args.use_global_max_bonus
+                                            ,global_bonus=args.global_bonus)
         case 'standerd':
             pass
     return env
@@ -203,6 +209,9 @@ if __name__ == "__main__":
     args = tyro.cli(Args)
     args.finalize()
 
+    register(id="Reach", entry_point="envs.fetch.reach:MujocoFetchReachEnv", max_episode_steps=args.max_episode_steps)
+    register(id="Push", entry_point="envs.fetch.reach:MujocoFetchPushEnv", max_episode_steps=args.max_episode_steps)
+
     print("torch num_threads:", torch.get_num_threads())
     print("torch interop:", torch.get_num_interop_threads())
     print("OMP_NUM_THREADS:", os.environ.get("OMP_NUM_THREADS"))
@@ -211,4 +220,3 @@ if __name__ == "__main__":
         train_and_evaluate(args)
         args.reset_seed()
         time.sleep(5)
-

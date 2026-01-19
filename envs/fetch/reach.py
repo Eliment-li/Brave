@@ -2,7 +2,7 @@ import os
 
 from gymnasium.utils.ezpickle import EzPickle
 
-from gymnasium_robotics.envs.fetch import MujocoFetchEnv, MujocoPyFetchEnv
+from envs.fetch.fetch_env import MujocoFetchEnv, MujocoPyFetchEnv
 
 # Ensure we get the path separator correct on windows
 MODEL_XML_PATH = os.path.join("fetch", "reach.xml")
@@ -142,6 +142,7 @@ class MujocoFetchReachEnv(MujocoFetchEnv, EzPickle):
             distance_threshold=0.05,
             initial_qpos=initial_qpos,
             reward_type=reward_type,
+            truncate_on_success=True,
             **kwargs,
         )
         EzPickle.__init__(self, reward_type=reward_type, **kwargs)
@@ -168,6 +169,7 @@ class MujocoPyFetchReachEnv(MujocoPyFetchEnv, EzPickle):
             distance_threshold=0.05,
             initial_qpos=initial_qpos,
             reward_type=reward_type,
+            truncate_on_success=True,
             **kwargs,
         )
         EzPickle.__init__(self, reward_type=reward_type, **kwargs)
