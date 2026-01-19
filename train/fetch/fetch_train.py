@@ -228,7 +228,7 @@ if __name__ == "__main__":
     args.finalize()
 
     register(id="Reach", entry_point="envs.fetch.reach:MujocoFetchReachEnv", max_episode_steps=args.max_episode_steps)
-    register(id="Push", entry_point="envs.fetch.reach:MujocoFetchPushEnv", max_episode_steps=args.max_episode_steps)
+    register(id="Push", entry_point="envs.fetch.push:MujocoFetchPushEnv", max_episode_steps=args.max_episode_steps)
 
     print("torch num_threads:", torch.get_num_threads())
     print("torch interop:", torch.get_num_interop_threads())
