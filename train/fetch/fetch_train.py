@@ -17,6 +17,7 @@ from stable_baselines3.common.noise import NormalActionNoise
 
 from bak.configs.base_args import get_root_path
 from brs.fetch_task_brs import FetchTaskBRSRewardWrapper
+from algos.explors.fetch_explors_wrapper import FetchExploRSRewardWrapper, FetchExploRSConfig
 from utils.screen import set_screen_config
 from utils.swanlab_callback import SwanLabCallback
 import swanlab
@@ -118,9 +119,26 @@ def add_reward_wrapper(env, args):
     print(f'Adding reward wrapper: {args.reward_mode}')
     match args.reward_mode:
         case 'brave':
-            env = FetchTaskBRSRewardWrapper(env,task=args.task,
-                                            use_global_max_bonus=args.use_global_max_bonus
-                                            ,global_bonus=args.global_bonus)
+            env = FetchTaskBRSRewardWrapper(
+                env,
+                task=args.task,
+                use_global_max_bonus=args.use_global_max_bonus,
+                global_bonus=args.global_bonus,
+            )
+        case 'explors':
+            env = FetchExploRSRewardWrapper(
+                env,
+                config=FetchExploRSConfig(
+                    lmbd=1.0,
+                    max_bonus=1.0,
+                    explore_scale=1.0,
+                    exploit_scale=1.0,
+                    exploit_clip=1.0,
+                    bin_goal=0.05,
+                    obs_fallback_k=6,
+                    bin_obs=0.5,
+                ),
+            )
         case 'standerd':
             pass
     return env
