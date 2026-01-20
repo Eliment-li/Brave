@@ -5,7 +5,7 @@ This is based on:
 https://github.com/mahaozhe/ReLara/blob/main/ReLara/Algorithms.py
 
 Main differences:
-- We assume the env passed in already has a flat Box observation_space (see relara_env_maker.py).
+- We assume the env passed in already has a flat Box observation_space (see ant_env_maker.py).
 - Keeps the original SAC-style PA/RA training logic intact.
 """
 
@@ -78,9 +78,9 @@ class ReLaraAlgo:
       - RA: reward agent that proposes r_p(s,a) (SAC)
     """
 
-    def __init__(self, env: gym.Env, pa_actor_class, pa_critic_class, ra_actor_class, ra_critic_class, cfg: ReLaraConfig):
+    def __init__(self, env: gym.Env, pa_actor_class, pa_critic_class, ra_actor_class, ra_critic_class, cfg: ReLaraConfig,track:bool):
         self.cfg = cfg
-
+        self.track = track
         # seeds
         self.seed = int(cfg.seed)
         random.seed(self.seed)
@@ -268,7 +268,8 @@ class ReLaraAlgo:
             if rollout_ep_len_mean is not None:
                 log_data[r"rollout/ep_len_mean"] = rollout_ep_len_mean
 
-            swanlab.log(log_data, step=global_step)
+            if self.track:
+                swanlab.log(log_data, step=global_step)
 
             # PA stores env reward only
             self.pa_replay_buffer.add(obs, next_obs, action, reward_env, done, info)
@@ -289,20 +290,22 @@ class ReLaraAlgo:
                 if success is not None:
                     self.success_buffer.append(success)
                     success_rate = float(np.mean(self.success_buffer))
-                    swanlab.log({"rollout/success_rate": success_rate}, step=global_step)
+                    if self.track:
+                        swanlab.log({"rollout/success_rate": success_rate}, step=global_step)
 
                 # episode stats expected from RecordEpisodeStatistics
                 if isinstance(info, dict) and "episode" in info:
                     # self.writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                     # self.writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
                     # print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                    swanlab.log(
-                        {
-                            "charts/episodic_return": info["episode"]["r"],
-                            "charts/episodic_length": info["episode"]["l"],
-                        },
-                        step=global_step,
-                    )
+                    if self.track:
+                        swanlab.log(
+                            {
+                                "charts/episodic_return": info["episode"]["r"],
+                                "charts/episodic_length": info["episode"]["l"],
+                            },
+                            step=global_step,
+                        )
                 obs, _ = self.env.reset()
 
             # next action from PA

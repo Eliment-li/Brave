@@ -13,9 +13,9 @@ from stable_baselines3.common.monitor import Monitor
 from info_wrapper.ant_info_wrapper import AntTaskInfoWrapper
 
 from bak.configs.base_args import get_root_path
-from train.ant.basic.relara.relara_algo import ReLaraConfig, ReLaraAlgo
-from train.ant.basic.relara.relara_env_maker import make_ant_relara_env
-from train.ant.basic.relara.relara_networks import BasicActor, ActorResidual, QNetworkResidual, BasicQNetwork
+from algos.relara.relara_algo import ReLaraConfig, ReLaraAlgo
+from train.common.relara.ant_env_maker import make_ant_relara_env
+from algos.relara.relara_networks import BasicActor, ActorResidual, QNetworkResidual, BasicQNetwork
 
 
 @dataclass
