@@ -18,6 +18,7 @@ from stable_baselines3.common.noise import NormalActionNoise
 from bak.configs.base_args import get_root_path
 from brs.fetch_task_brs import FetchTaskBRSRewardWrapper
 from algos.explors.fetch_explors_wrapper import FetchExploRSRewardWrapper, FetchExploRSConfig
+from algos.rnd.fetch_rnd_wrapper import FetchRNDRewardWrapper
 from utils.screen import set_screen_config
 from utils.swanlab_callback import SwanLabCallback
 import swanlab
@@ -56,6 +57,10 @@ class Args:
     global_bonus: float = 10
     use_global_max_bonus: bool = True
 
+    # rnd_feature_dim: int = 128
+    # rnd_hidden_sizes: tuple[int, ...] = (256, 256)
+    # rnd_learning_rate: float = 1e-4
+    # rnd_beta: float = 1.0
     # TD3 Hyperparameters
     learning_rate: float = 1e-4
     batch_size: int = 256
@@ -139,6 +144,8 @@ def add_reward_wrapper(env, args):
                     bin_obs=0.5,
                 ),
             )
+        case 'rnd':
+            env = FetchRNDRewardWrapper(env)
         case 'standerd':
             pass
     return env
