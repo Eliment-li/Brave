@@ -33,7 +33,7 @@ class Args:
     repeat: int = 1
     seed: int = -1
     track: bool = False
-    task:str='reach' # reach,push
+    task:str='reach' # reach,push,slide
     reward_mode:str='standerd'
 
     # 允许覆盖 episode 长度；<=0 表示不传给 gym.make，使用环境默认 spec
@@ -89,6 +89,8 @@ class Args:
             self.env_id='Reach'
         elif self.task=='push':
             self.env_id='Push'
+        elif self.task=='slide':
+            self.env_id='Slide'
         safe_env = self.env_id.replace("/", "_")
         self.experiment_name = safe_env + "_" + arrow.now().format("MMDD_HHmm")
         self.experiment_name += ('_' + self.reward_mode)
@@ -236,6 +238,7 @@ if __name__ == "__main__":
 
     register(id="Reach", entry_point="envs.fetch.reach:MujocoFetchReachEnv", max_episode_steps=args.max_episode_steps)
     register(id="Push", entry_point="envs.fetch.push:MujocoFetchPushEnv", max_episode_steps=args.max_episode_steps)
+    register(id="Slide", entry_point="envs.fetch.slide:MujocoFetchSlideEnv", max_episode_steps=args.max_episode_steps)
 
     print("torch num_threads:", torch.get_num_threads())
     print("torch interop:", torch.get_num_interop_threads())
