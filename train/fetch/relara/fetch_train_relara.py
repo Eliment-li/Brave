@@ -44,7 +44,7 @@ class Args:
     save_dir: str = get_root_path() + "/results/relara_checkpoints/Fetch"
     tags: list[str] = field(default_factory=list)
 
-    swanlab_project: str = "Brave_Fetch_ReLara"
+    swanlab_project: str = "Brave_Fetch"
     swanlab_workspace: str = "Eliment-li"
 
     def reset_seed(self):
