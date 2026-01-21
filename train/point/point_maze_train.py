@@ -35,7 +35,7 @@ class Args:
     total_timesteps: int = int(2e3)
     repeat: int = 1
     seed: int = -1
-    reward_mode: str = "standerd"  # standerd / brave / explors /rnd
+    reward_mode: str = "standard"  # standard / brave / explors /rnd
     max_episode_steps:int =200
     #brave
     global_bonus:float =  5
@@ -129,7 +129,7 @@ def add_reward_wrapper(env, args: Args):
                 obs_fallback_k=args.explors_obs_fallback_k,
             )
             env = ExploRSRewardWrapper(env, cfg)
-        case "standerd":
+        case "standard":
             pass
         case _:
             pass
