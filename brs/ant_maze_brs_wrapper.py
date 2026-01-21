@@ -11,6 +11,9 @@ class AntMazeBRSRewardWrapper(BRSRewardWrapperBase):
         gamma: float = 0.99,
         beta: float = 1.1,
         min_bonus: float = 0.01,
+        use_global_max_bonus:bool=True,
+        global_bonus: float | None = None,
+
     ):
         def agent_xy(e: gym.Env) -> np.ndarray:
             data = e.unwrapped.data
@@ -52,4 +55,6 @@ class AntMazeBRSRewardWrapper(BRSRewardWrapperBase):
             gamma=gamma,
             beta=beta,
             min_bonus=min_bonus,
+            use_global_max_bonus=use_global_max_bonus,
+            global_bonus=global_bonus,
         )
