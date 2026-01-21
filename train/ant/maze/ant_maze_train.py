@@ -31,7 +31,7 @@ from utils.swanlab_callback import SwanLabCallback
 @dataclass
 class Args:
     # env
-    env_id: str = "AntMaze_UMaze-v5"  # 例如：AntMaze_UMaze-v5 / AntMaze_BigMaze-v5 / AntMaze_HardestMaze-v5
+    env_id: str = "AntMaze"
     #如果使用 dense rewrad,只需修改 env_id 即可 例如 AntMaze_UMazeDense-v5
     reward_type: str = "sparse"       # sparse / dense（取决于你注册的 id 是否支持 Dense；否则用 reward_type 参数）
     total_timesteps: int = int(2e3)
