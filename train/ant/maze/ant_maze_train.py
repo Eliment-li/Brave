@@ -10,6 +10,7 @@ import gymnasium_robotics
 import numpy as np
 import torch
 import tyro
+from gymnasium import register
 from gymnasium.wrappers import RecordVideo
 from stable_baselines3 import TD3
 from stable_baselines3.common.env_util import make_vec_env
@@ -37,6 +38,7 @@ class Args:
     repeat: int = 1
     seed: int = -1
     reward_mode: str = "standard"
+    max_episode_steps:int = 200
 
     # brave
     global_bonus: float = 5.0
@@ -229,9 +231,10 @@ def train_and_evaluate(args: Args):
 if __name__ == "__main__":
 
     set_screen_config()
-    gym.register_envs(gymnasium_robotics)
     args = tyro.cli(Args)
     args.finalize()
+    register(id="AntMaze", entry_point="envs.maze.ant_maze:AntMazeEnv",
+             max_episode_steps=args.max_episode_steps)
 
     print("torch num_threads:", torch.get_num_threads())
     print("torch interop:", torch.get_num_interop_threads())
