@@ -336,5 +336,3 @@ class AntMazeEnv(MazeEnv, EzPickle):
     @property
     def data(self):
         return self.ant_env.data
-
-翻译
