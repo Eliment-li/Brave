@@ -442,11 +442,16 @@ class HumanoidStandupEnv(MujocoEnv, utils.EzPickle):
             "tendon_velocity": self.data.ten_velocity,
             **reward_info,
         }
+        truncated = False
+        success = pos_after >= self._height_th
+        info["is_success"] = float(success)
+        if success:
+            truncated= True
 
         if self.render_mode == "human":
             self.render()
         # truncation=False as the time limit is handled by the `TimeLimit` wrapper added during `make`
-        return self._get_obs(), reward, False, False, info
+        return self._get_obs(), reward, False, truncated, info
 
     def _get_rew(self, pos_after: float, action):
         uph_cost = (pos_after - 0) / self.model.opt.timestep

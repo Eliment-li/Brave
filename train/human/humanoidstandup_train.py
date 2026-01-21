@@ -69,14 +69,17 @@ class Args:
 
     # TD3 Hyperparameters
     learning_rate: float = 1e-4
-    batch_size: int = 256
-    learning_starts: int = 10_000
+    batch_size: int = 1024
+    learning_starts: int = 50_000
     train_freq: int = 1
-    gradient_steps: int = 1
-    noise_std: float = 0.1
+    gradient_steps: int = 2
+    noise_std: float = 0.2
 
     noise_type: str = "normal"
 
+    # TD3 network architecture (MlpPolicy)
+    # 例如: [512, 512] 表示 2 层，每层 512；[] 表示不加隐藏层
+    td3_net_arch: list[int] = field(default_factory=lambda: [512,512])
 
     # others
     num_threads: int = -1
@@ -152,6 +155,8 @@ def train_and_evaluate(args: Args):
     if args.noise_type == "normal":
         action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=args.noise_std * np.ones(n_actions))
 
+    policy_kwargs = dict(net_arch=list(args.td3_net_arch))
+
     hyperparams = dict(
         policy="MlpPolicy",
         learning_rate=args.learning_rate,
@@ -162,6 +167,7 @@ def train_and_evaluate(args: Args):
         train_freq=args.train_freq,
         gradient_steps=args.gradient_steps,
         action_noise=action_noise,
+        policy_kwargs=policy_kwargs,
         verbose=1,
         seed=args.seed,
     )
