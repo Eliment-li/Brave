@@ -181,6 +181,9 @@ class SwanLabCallback(BaseCallback):
             r'rollout/episodic_return',
             #r'charts/episodic_length',
             'cost','best_cost','delta','improved'
+            ,'metric_max_humanoid','humanoid_metric','humanoid_height_torso_z','humanoid_upright'
+            'humanoid_speed','humanoid_stability','humanoid_metric_max'
+
         ]
 
         if dones[0]:
