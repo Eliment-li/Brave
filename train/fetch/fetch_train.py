@@ -91,6 +91,8 @@ class Args:
             self.env_id='Push'
         elif self.task=='slide':
             self.env_id='Slide'
+        elif self.task=='pick':
+            self.env_id='PickAndPlace'
         safe_env = self.env_id.replace("/", "_")
         self.experiment_name = safe_env + "_" + arrow.now().format("MMDD_HHmm")
         self.experiment_name += ('_' + self.reward_mode)
@@ -239,6 +241,7 @@ if __name__ == "__main__":
     register(id="Reach", entry_point="envs.fetch.reach:MujocoFetchReachEnv", max_episode_steps=args.max_episode_steps)
     register(id="Push", entry_point="envs.fetch.push:MujocoFetchPushEnv", max_episode_steps=args.max_episode_steps)
     register(id="Slide", entry_point="envs.fetch.slide:MujocoFetchSlideEnv", max_episode_steps=args.max_episode_steps)
+    register(id="PickAndPlace", entry_point="envs.fetch.pick_and_place:MujocoFetchPickAndPlaceEnv",max_episode_steps=args.max_episode_steps)
 
     print("torch num_threads:", torch.get_num_threads())
     print("torch interop:", torch.get_num_interop_threads())
