@@ -39,6 +39,7 @@ class Args:
     seed: int = -1
     reward_mode: str = "standard"
     max_episode_steps:int = 200
+    early_break:bool =True
 
     # brave
     global_bonus: float = 5.0
@@ -63,11 +64,14 @@ class Args:
 
     # TD3
     learning_rate: float = 1e-4
-    batch_size: int = 256
-    learning_starts: int = 10000
+    batch_size: int = 512
+    learning_starts: int = 25000
     train_freq: int = 1
-    gradient_steps: int = 1
-    noise_std: float = 0.1
+    gradient_steps: int = 2
+    noise_std: float = 0.2
+    # TD3 network architecture (MlpPolicy)
+    # 例如: [512, 512] 表示 2 层，每层 512；[] 表示不加隐藏层
+    td3_net_arch: list[int] = field(default_factory=lambda: [512,512,512])
 
     # others
     num_threads: int = -1
@@ -152,7 +156,7 @@ def train_and_evaluate(args: Args):
         mean=np.zeros(n_actions),
         sigma=args.noise_std * np.ones(n_actions),
     )
-
+    policy_kwargs = dict(net_arch=list(args.td3_net_arch))
     model = TD3(
         policy="MultiInputPolicy",
         env=env,
@@ -160,12 +164,13 @@ def train_and_evaluate(args: Args):
         buffer_size=1_000_000,
         learning_starts=args.learning_starts,
         batch_size=args.batch_size,
-        gamma=0.99,
+        gamma=0.995,
         train_freq=args.train_freq,
         gradient_steps=args.gradient_steps,
         action_noise=action_noise,
         verbose=1,
         seed=args.seed,
+        policy_kwargs=policy_kwargs,
     )
 
     if args.track:
