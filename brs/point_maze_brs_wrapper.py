@@ -3,10 +3,10 @@ from typing import Optional
 import numpy as np
 import gymnasium as gym
 
-from brs.brs_wrapper import BRSRewardWrapperBase
+from brs.brs_wrapper import BRSRewardWrapperBaseV2
 
 
-class PointMazeBRSRewardWrapper(BRSRewardWrapperBase):
+class PointMazeBRSRewardWrapper(BRSRewardWrapperBaseV2):
     def __init__(
         self,
         env: gym.Env,

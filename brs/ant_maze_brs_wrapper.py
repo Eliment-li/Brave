@@ -1,10 +1,10 @@
 import numpy as np
 import gymnasium as gym
 
-from brs.brs_wrapper import BRSRewardWrapperBase
+from brs.brs_wrapper import BRSRewardWrapperBaseV2
 
 
-class AntMazeBRSRewardWrapper(BRSRewardWrapperBase):
+class AntMazeBRSRewardWrapper(BRSRewardWrapperBaseV2):
     def __init__(
         self,
         env: gym.Env,
