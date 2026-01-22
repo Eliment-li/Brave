@@ -30,7 +30,7 @@ class Args:
     repeat: int = 1
     seed: int = -1
     track: bool = False
-    reward_mode: str = "standad"  # standad|brave
+    reward_mode: str = "standard"  # standad|brave
     reward_type: str = "dense"     # dense|sparse
     sparse_height_th: float = 0.2
 
@@ -136,7 +136,7 @@ def add_reward_wrapper(env: gym.Env, args: Args):
                 use_global_max_bonus=args.use_global_max_bonus,
                 global_bonus=args.global_bonus,
             )
-        case "standad":
+        case "standard":
             pass
     return env
 
