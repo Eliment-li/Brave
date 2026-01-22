@@ -217,7 +217,7 @@ class BRSRewardWrapperBaseV2(gym.Wrapper):
 
         info[f"metric_episode_max_{self.metric_name}"] = self.episode_max
         info[f"metric_global_max_{self.metric_name}"] = self.global_max
-        info[f"metric_max_{self.metric_name}"] = self.episode_max
+        #info[f"metric_max_{self.metric_name}"] = self.episode_max
 
         if self.info_fn is not None:
             info.update(dict(self.info_fn(self.env, metric, self.episode_max) or {}))

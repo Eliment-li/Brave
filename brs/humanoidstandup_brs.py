@@ -68,30 +68,9 @@ class HumanoidStandupBRSRewardWrapper(BRSRewardWrapperBaseV2):
         def metric_fn(e: gym.Env) -> float:
             u = e.unwrapped
             data = getattr(u, "data", None)
-            model = getattr(u, "model", None)
-            if data is None or model is None:
-                raise RuntimeError("HumanoidStandupBRSRewardWrapper requires env.unwrapped.data/model")
-
-            torso_id = _get_torso_id(e)
-
-            # height term: torso COM z
-            torso_z = float(data.xpos[torso_id][2])
-
-            # upright term: torso local z axis vs world z
-            # data.xmat is flattened 3x3 row-major matrix (length 9)
-            # columns correspond to body frame axes expressed in world frame.
-            xmat = np.asarray(data.xmat[torso_id], dtype=np.float32).reshape(3, 3)
-            torso_z_axis_world = xmat[:, 2]
-            upright = float(np.clip(torso_z_axis_world[2], -1.0, 1.0))
-
-            # stability term: combine linear & angular speed; bigger metric => smaller speed
-            lin_vel = np.asarray(data.cvel[torso_id][:3], dtype=np.float32)
-            ang_vel = np.asarray(data.cvel[torso_id][3:6], dtype=np.float32)
-            speed = float(self.stability_lin_w * np.linalg.norm(lin_vel) + self.stability_ang_w * np.linalg.norm(ang_vel))
-            stability = float(np.exp(-self.stability_k * speed))
-
-            metric = self.w_height * torso_z + self.w_upright * upright + self.w_stability * stability
-            return float(metric)
+            if data is None:
+                raise RuntimeError("HumanoidStandupBRSRewardWrapper requires env.unwrapped.data")
+            return float(self.w_height * data.qpos[2])
 
         def info_fn(e: gym.Env, metric: float, metric_max: float):
             u = e.unwrapped
@@ -99,8 +78,8 @@ class HumanoidStandupBRSRewardWrapper(BRSRewardWrapperBaseV2):
             model = getattr(u, "model", None)
             if data is None or model is None:
                 return {
-                    "humanoid_metric": float(metric),
-                    "humanoid_metric_max": float(metric_max),
+                   # "pos_after": float(metric),
+                    # "humanoid_metric_max": float(metric_max),
                 }
 
             # recompute terms for logging
@@ -117,18 +96,18 @@ class HumanoidStandupBRSRewardWrapper(BRSRewardWrapperBaseV2):
                 torso_z, upright, speed, stability = np.nan, np.nan, np.nan, np.nan
 
             return {
-                "humanoid_metric": float(metric),
+                #"pos_after": float(metric),
                 "humanoid_height_torso_z": float(torso_z),
                 "humanoid_upright": float(upright),
                 "humanoid_speed": float(speed),
                 "humanoid_stability": float(stability),
-                "humanoid_metric_max": float(metric_max),
+                # "humanoid_metric_max": float(metric_max),
             }
 
         super().__init__(
             env=env,
             metric_fn=metric_fn,
-            metric_name="humanoid",
+            metric_name="pos_after",
             info_fn=info_fn,
             gamma=gamma,
             beta=beta,
