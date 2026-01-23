@@ -16,6 +16,10 @@ from stable_baselines3.common.noise import NormalActionNoise
 
 from bak.configs.base_args import get_root_path
 from brs.humanoidstandup_brs import HumanoidStandupBRSRewardWrapper
+from algos.explors.humanoidstandup_explors_wrapper import (
+    HumanoidStandupExploRSRewardWrapper,
+    HumanoidStandupExploRSConfig,
+)
 from utils.screen import set_screen_config
 from utils.swanlab_callback import SwanLabCallback
 import swanlab
@@ -30,7 +34,7 @@ class Args:
     repeat: int = 1
     seed: int = -1
     track: bool = False
-    reward_mode: str = "standard"  # standad|brave
+    reward_mode: str = "standard"  # standard|brave|explors
     reward_type: str = "dense"     # dense|sparse
     sparse_height_th: float = 0.2
 
@@ -54,6 +58,16 @@ class Args:
     # brave
     global_bonus: float = 10
     use_global_max_bonus: bool = True
+
+    # explors
+    explors_lmbd: float = 1.0
+    explors_max_bonus: float = 1.0
+    explors_explore_scale: float = 1.0
+    explors_exploit_scale: float = 1.0
+    explors_exploit_clip: float = 1.0
+    explors_bin_xy: float = 0.5
+    explors_bin_z: float = 0.05
+    explors_bin_v: float = 0.5
 
     # PPO hyperparameters (reasonable defaults for MuJoCo continuous control)
     # learning_rate: float = 3e-4
@@ -135,6 +149,20 @@ def add_reward_wrapper(env: gym.Env, args: Args):
                 env,
                 use_global_max_bonus=args.use_global_max_bonus,
                 global_bonus=args.global_bonus,
+            )
+        case "explors":
+            env = HumanoidStandupExploRSRewardWrapper(
+                env,
+                config=HumanoidStandupExploRSConfig(
+                    lmbd=args.explors_lmbd,
+                    max_bonus=args.explors_max_bonus,
+                    explore_scale=args.explors_explore_scale,
+                    exploit_scale=args.explors_exploit_scale,
+                    exploit_clip=args.explors_exploit_clip,
+                    bin_xy=args.explors_bin_xy,
+                    bin_z=args.explors_bin_z,
+                    bin_v=args.explors_bin_v,
+                ),
             )
         case "standard":
             pass
