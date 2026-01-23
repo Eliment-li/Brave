@@ -27,9 +27,9 @@ class Args:
     task: str = ""  # speed, far, stand
     # task config
     reward_type: str = "dense"
-    speed_target: float = 3.5
-    height_target: float = 0.9
-    dist_target: float = 5.0
+    target_speed: float = 3.5
+    target_height: float = 0.9
+    target_dist: float = 5.0
     terminate_when_unhealthy: bool = True
     ctrl_cost_weight: float = 0.5
     early_break: bool = True
@@ -85,9 +85,9 @@ def main(args: Args):
         args.env_id,
         seed=args.seed,
         reward_type=args.reward_type,
-        target_speed=args.speed_target ,
-        target_height=args.height_target ,
-        target_dist=args.dist_target ,
+        target_speed=args.target_speed ,
+        target_height=args.target_height ,
+        target_dist=args.target_dist,
         terminate_when_unhealthy=args.terminate_when_unhealthy,
         ctrl_cost_weight = args.ctrl_cost_weight,
         early_break=args.early_break,
