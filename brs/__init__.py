@@ -1,1 +1,2 @@
 from .humanoidstandup_brs import HumanoidStandupBRSRewardWrapper
+from brs.mountain_car_brs_wrapper import MountainCarBRSRewardWrapper
