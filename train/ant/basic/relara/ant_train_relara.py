@@ -120,6 +120,7 @@ def main(args: Args):
         ra_actor_class=ActorResidual,
         ra_critic_class=QNetworkResidual,
         cfg=cfg,
+        track = args.track
     )
 
     agent.learn(
