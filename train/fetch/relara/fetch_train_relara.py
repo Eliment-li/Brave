@@ -26,6 +26,7 @@ class Args:
     total_timesteps: int = int(10000)
     seed: int = -1
     track: bool = False
+    repeat: int = 1
 
     # env
     reward_type: str = "sparse"  # sparse | dense
@@ -121,9 +122,9 @@ if __name__ == "__main__":
     args.finalize()
     # Ensure Gymnasium robotics envs (Fetch*) are registered
     # register_envs(gymnasium_robotics)
-
-    register(id="Reach", entry_point="envs.fetch.reach:MujocoFetchReachEnv", max_episode_steps=args.max_episode_steps)
-    register(id="Push", entry_point="envs.fetch.push:MujocoFetchPushEnv", max_episode_steps=args.max_episode_steps)
-
-
-    main(args)
+    for i in range(args.repeat):
+        register(id="Reach", entry_point="envs.fetch.reach:MujocoFetchReachEnv", max_episode_steps=args.max_episode_steps)
+        register(id="Push", entry_point="envs.fetch.push:MujocoFetchPushEnv", max_episode_steps=args.max_episode_steps)
+        args.reset_seed()
+        time.sleep(10)
+        main(args)
