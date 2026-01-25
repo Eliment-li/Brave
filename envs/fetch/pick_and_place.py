@@ -2,8 +2,9 @@ import os
 
 from gymnasium.utils.ezpickle import EzPickle
 
-from gymnasium_robotics.envs.fetch import MujocoFetchEnv
-
+# from gymnasium_robotics.envs.fetch import MujocoFetchEnv
+# `envs/fetch/slide.py`
+from envs.fetch.fetch_env import MujocoFetchEnv
 MODEL_XML_PATH = os.path.join("fetch", "pick_and_place.xml")
 
 

@@ -3,8 +3,9 @@ import os
 import numpy as np
 from gymnasium.utils.ezpickle import EzPickle
 
-from gymnasium_robotics.envs.fetch import MujocoFetchEnv
-
+# from gymnasium_robotics.envs.fetch import MujocoFetchEnv
+# `envs/fetch/slide.py`
+from envs.fetch.fetch_env import MujocoFetchEnv
 # Ensure we get the path separator correct on windows
 MODEL_XML_PATH = os.path.join("fetch", "slide.xml")
 
