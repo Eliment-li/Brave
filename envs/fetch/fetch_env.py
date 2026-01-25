@@ -2,9 +2,9 @@ from typing import Union
 
 import numpy as np
 
-# from gymnasium_robotics.envs.robot_env import  MujocoRobotEnv
+from gymnasium_robotics.envs.robot_env import  MujocoRobotEnv
 # `envs/fetch/slide.py`
-from envs.fetch.fetch_env import MujocoFetchEnv
+# from envs.fetch.fetch_env import MujocoFetchEnv
 from gymnasium_robotics.utils import rotations
 
 DEFAULT_CAMERA_CONFIG = {
