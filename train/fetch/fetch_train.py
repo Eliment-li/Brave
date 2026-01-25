@@ -5,7 +5,6 @@ from pathlib import Path
 
 import arrow
 import gymnasium as gym
-import gymnasium_robotics
 import numpy as np
 import torch
 from gymnasium.wrappers import RecordVideo
@@ -234,7 +233,6 @@ def train_and_evaluate(args: Args):
 if __name__ == "__main__":
     set_screen_config()
     from gymnasium.envs.registration import register, register_envs
-    register_envs(gymnasium_robotics)
     args = tyro.cli(Args)
     args.finalize()
 
