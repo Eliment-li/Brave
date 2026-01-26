@@ -11,9 +11,11 @@ class AntBRSRewardWrapperV5(gym.Wrapper):
         gamma: float = 0.99,
         beta: float = 1.001,
         min_bonus: float = 1,
+        global_bonus: float = 0,
     ):
         super().__init__(env)
-
+        self.global_bonus = global_bonus
+        print(f'global_bonus set to {self.global_bonus}')
         self.task = getattr(self.env.unwrapped, "task", None)
         if self.task not in {"stand", "speed", "far"}:
             raise ValueError(f"Unsupported task: {self.task}")
@@ -55,7 +57,7 @@ class AntBRSRewardWrapperV5(gym.Wrapper):
             #global
             if metric > self.global_max:
                 self.global_max = metric
-                bonus +=20
+                bonus +=self.global_bonus
 
             reward = bonus
             self.rdcr = self.gamma * self.rdcr + reward

@@ -76,6 +76,7 @@ class Args:
     noise_type: str = 'normal'
     optimizer: str = "adam"
     optimizer_eps: float = 1e-7
+    global_bonus: float= 10.0
 
     #others
     num_threads:int=-1
@@ -139,13 +140,13 @@ def resolve_optimizer(name: str):
     except KeyError as exc:
         raise ValueError(f"Unsupported optimizer '{name}'. Available: {list(_OPTIMIZER_MAP)}") from exc
 
-def make_ant_brs_wrapper(env, version: int):
+def make_ant_brs_wrapper(env, version: int,args):
     """根据版本号返回对应的 Ant BRS reward wrapper。"""
     wrapper_cls = _WRAPPER_MAP.get(version)
     print(f'use reward wrapper v{str(wrapper_cls)}')
     if wrapper_cls is None:
         raise ValueError(f"未知的 AntBRSRewardWrapper 版本: {version}")
-    return wrapper_cls(env)
+    return wrapper_cls(env,global_bonus=args.global_bonus)
 
 def save_model(model: TD3, path: str) -> None:
     model.save(path)
@@ -158,7 +159,7 @@ def add_reward_wrapper(env, args):
     print(f'Adding reward wrapper: {args.reward_mode}')
     match args.reward_mode:
         case 'brave':
-            env = make_ant_brs_wrapper(env, args.r_wrapper_ver)
+            env = make_ant_brs_wrapper(env, args.r_wrapper_ver,args)
         case 'rnd':
             env = RNDRewardWrapper(env, beta=1.0)
         case 'explors':
