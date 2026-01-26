@@ -56,7 +56,7 @@ class Args:
     tags: list[str] = field(default_factory=list)
 
     # brave
-    global_bonus: float = 10
+    global_bonus: float = 100
     use_global_max_bonus: bool = True
 
     # explors

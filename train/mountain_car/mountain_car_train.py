@@ -28,14 +28,14 @@ import tyro
 class Args:
     # env
     env_id: str = "MountainCarContinuous-v0"
-    total_timesteps: int = int(1000000)
+    total_timesteps: int = int(1000)
     repeat: int = 1
     seed: int = -1
     track: bool = False
     reward_mode: str = "brave"  # brave | standard
 
     # allow override episode length; <=0 means use env default spec
-    max_episode_steps: int = -1
+    max_episode_steps: int = 500
 
     # eval
     n_eval_episodes: int = 3
