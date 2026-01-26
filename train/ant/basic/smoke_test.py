@@ -8,11 +8,15 @@ from train.ant.basic.ant_train import Args, train_and_evaluate
 # configure(folder=None, format_strings=[])
 if __name__ == "__main__":
     args = tyro.cli(Args)
-    args.task='speed'
-    args.reward_mode='brave'
-    args.reward_type = 'dense'
-    args.r_wrapper_ver=4
-    args.track=False
+    args.task='stand'
+    args.reward_mode='rnd'
+    args.reward_type = 'sparse'
+    args.r_wrapper_ver=5
+    args.early_break=False
+    args.track=True
+    args.ctrl_cost_weight=0.05
+    args.total_timesteps=30_0000
+    args.max_episode_steps=200
     args.finalize()
     register(id="AntStand-v0", entry_point="envs.ant.ant_tasks:AntStand", max_episode_steps=args.max_episode_steps)
     register(id="AntSpeed-v0", entry_point="envs.ant.ant_tasks:AntSpeed", max_episode_steps=args.max_episode_steps)
