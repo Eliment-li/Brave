@@ -147,7 +147,7 @@ def make_ant_brs_wrapper(env, version: int,args):
     print(f'use reward wrapper v{str(wrapper_cls)}')
     if wrapper_cls is None:
         raise ValueError(f"未知的 AntBRSRewardWrapper 版本: {version}")
-    return wrapper_cls(env,global_bonus=args.global_bonus)
+    return wrapper_cls(env,global_bonus=args.global_bonus,beta=args.brs_beta)
 
 def save_model(model: TD3, path: str) -> None:
     model.save(path)
