@@ -338,5 +338,5 @@ if __name__ == "__main__":
         legend_loc="upper right",
         xlabel_text_mode="leftmost",  # 关键：只在最左列显示横轴说明 text
     )
-    plt.savefig("train_curves.png", dpi=150, bbox_inches="tight")
+    plt.savefig("train_curves.png", dpi=300, bbox_inches="tight")
     plt.show()

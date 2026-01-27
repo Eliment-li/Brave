@@ -58,7 +58,7 @@ class Args:
     # brave
     global_bonus: float = 100
     use_global_max_bonus: bool = True
-
+    brs_beta:float=1.1
     # explors
     explors_lmbd: float = 1.0
     explors_max_bonus: float = 1.0
@@ -149,6 +149,7 @@ def add_reward_wrapper(env: gym.Env, args: Args):
                 env,
                 use_global_max_bonus=args.use_global_max_bonus,
                 global_bonus=args.global_bonus,
+                beta=args.brs_beta,
             )
         case "explors":
             env = HumanoidStandupExploRSRewardWrapper(
