@@ -149,9 +149,12 @@ def align_runs_by_steps(
 
 def _default_color_cycle() -> List[str]:
     # matplotlib tab10-ish（无需依赖 mpl）
-    return [
-        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
-        "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+    # return [
+    #     "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+    #     "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+    # ]
+    return[
+        "#ab3a29","#1e7c4a","#13679e","#d07f2c","#e5a2c4"
     ]
 
 
@@ -168,7 +171,7 @@ def build_specs_from_root(
     *,
     ylabel: str = "",
     xlabel_text: str = "Steps (in thousands)",
-    smooth_window: int = 21,
+    smooth_window: int = 1000,
     mean_alpha: float = 0.25,
     smooth_alpha: float = 0.99,
     steps_in_thousands: bool = True,
@@ -227,6 +230,7 @@ def build_specs_from_root(
             algo = csv_path.stem
             label = algo_display_name.get(algo, algo)
             color = algo_color.get(algo, colors[k % len(colors)])
+            is_brave = label.strip().lower() == "brave" or algo.strip().lower() == "brave"
 
             curves.append(
                 CurveSpec(
@@ -237,6 +241,7 @@ def build_specs_from_root(
                     mean_alpha=mean_alpha,
                     smooth_alpha=smooth_alpha,
                     steps=x_scaled,
+                    priority=100 if is_brave else 0,
                 )
             )
         if not curves:

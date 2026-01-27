@@ -19,7 +19,7 @@ plt.rcParams["ps.fonttype"] = 42
 # mpl.rcParams["font.size"] = 24  # <- 改为由 plot_training_curves_grid 的 font_sizes.base 控制
 
 LEGEND_SIZE = 20
-LABEL_SIZE = 24
+LABEL_SIZE = 20
 LINE_WIDTH = 0.5
 
 GRID_COLOR = "#cfcfcf"
@@ -45,6 +45,7 @@ class CurveSpec:
     smooth_alpha: float = 0.99
     mean_lw: float = LINE_WIDTH
     smooth_lw: float = LINE_WIDTH * 2
+    priority: int = 0
 
 
 @dataclass(frozen=True)
@@ -58,7 +59,7 @@ class SubplotSpec:
     show_xlabel_text: Optional[bool] = None
     # 新增：控制 xlabel_text 在 Axes 坐标系中的 y 位置（越小越往下，间距越大）
     # 例如：-0.12 更贴近图；-0.25 更远（需要更多底部留白）
-    xlabel_text_y: Optional[float] = -0.05
+    xlabel_text_y: Optional[float] = -0.125
 
     x: Optional[np.ndarray] = None              # 默认用 [0..T-1]
     limits: Optional[AxisLimit] = None          # 子图单独覆盖全局限制（可选）
@@ -69,12 +70,12 @@ class SubplotSpec:
 @dataclass(frozen=True)
 class FontSizes:
     """统一控制图内所有文本字号（不传则使用旧常量/默认）。"""
-    base: int = 24                 # 对应 rcParams['font.size']
-    title: int = LABEL_SIZE
-    label: int = LABEL_SIZE        # x/y label（这里主要用在 ylabel 和 xlabel_text）
-    tick: int = 20                 # 坐标轴刻度数字
+    base: int = 20                 # 对应 rcParams['font.size']
+    title: int = 24
+    label: int = 24        # x/y label（这里主要用在 ylabel 和 xlabel_text）
+    tick: int = 14                 # 坐标轴刻度数字
     legend: int = LEGEND_SIZE
-    xlabel_text: int = 20  # ax.text 的轴下方说明文本
+    xlabel_text: int = 14  # ax.text 的轴下方说明文本
     offset: int = 20               # 科学计数法 offset 文本（如 1e3）
 
 
@@ -135,17 +136,19 @@ def plot_training_curves_grid(
     global_limits: Optional[AxisLimit] = None,
     hspace: float = 0.15,
     wspace: float = 0.20,
-    show_legend: bool = True,
+    show_legend: bool = False,
     legend_loc: str = "upper right",
     sharex: bool = False,
     sharey: bool = False,
     font_sizes: Optional[FontSizes] = None,
     default_xlabel_text_y: float = -0.18,
     # 新增：xlabel 说明文本的显示策略
-    # - "all": 每个子图都显示（保持旧行为）
+    xlabel_text_mode: Literal["all", "leftmost", "none"] = "all",
+    # 新增：ylabel 的显示策略
+    # - "all": 每个子图都显示（旧行为）
     # - "leftmost": 只在最左列子图显示（你的需求）
     # - "none": 全部不显示
-    xlabel_text_mode: Literal["all", "leftmost", "none"] = "all",
+    ylabel_mode: Literal["all", "leftmost", "none"] = "leftmost",
 ) -> Tuple[plt.Figure, np.ndarray]:
     """
     - n*m 网格子图
@@ -171,7 +174,18 @@ def plot_training_curves_grid(
             col = idx % ncols  # 预留：如你后续想按列控制显示
 
             ax.set_title(sp.title, fontsize=fs.title, pad=10)
-            ax.set_ylabel(sp.ylabel, fontsize=fs.label)
+
+            # === 只控制 ylabel 文本；不要隐藏任何子图的 y 轴刻度数字 ===
+            if ylabel_mode == "none":
+                ax.set_ylabel("", fontsize=fs.label)
+            elif ylabel_mode == "leftmost":
+                ax.set_ylabel(sp.ylabel if col == 0 else "", fontsize=fs.label)
+            else:
+                ax.set_ylabel(sp.ylabel, fontsize=fs.label)
+
+            # 若你曾经 sharey=True 导致非首列不显示 y tick label，可强制打开：
+            ax.tick_params(axis="y", which="both", labelleft=True)
+
             shared_x = _ensure_1d(sp.x) if sp.x is not None else None
 
             # 统一控制 tick 字号（x/y）
@@ -182,7 +196,8 @@ def plot_training_curves_grid(
                 raise ValueError("SubplotSpec.x 不能为空（应传入 steps 或其缩放值）")
             x_full = _ensure_1d(sp.x)
 
-            for c in sp.curves:
+            curves_sorted = sorted(sp.curves, key=lambda c: c.priority)
+            for c in curves_sorted:
                 curve_steps = c.steps if c.steps is not None else shared_x
                 if curve_steps is None:
                     raise ValueError("CurveSpec.steps 与 SubplotSpec.x 至少需提供一份 x 数据")
@@ -191,10 +206,29 @@ def plot_training_curves_grid(
 
                 # 每个 step：忽略 NaN；一行多个值 => 取平均
                 mean = np.nanmean(runs2d, axis=0)
-                smooth = _moving_average(mean, c.smooth_window)
+                mean_percent = mean * 100.0
+                smooth = _moving_average(mean_percent, c.smooth_window)
 
-                ax.plot(xx, mean, color=c.color, linewidth=c.mean_lw, alpha=c.mean_alpha, label=None)
-                ax.plot(xx, smooth, color=c.color, linewidth=c.smooth_lw, alpha=c.smooth_alpha, label=c.label)
+                mean_z = 2 + c.priority * 2
+                smooth_z = mean_z + 0.1
+                ax.plot(
+                    xx,
+                    mean_percent,
+                    color=c.color,
+                    linewidth=c.mean_lw,
+                    alpha=c.mean_alpha,
+                    label=None,
+                    zorder=mean_z,
+                )
+                ax.plot(
+                    xx,
+                    smooth,
+                    color=c.color,
+                    linewidth=c.smooth_lw,
+                    alpha=c.smooth_alpha,
+                    label=c.label,
+                    zorder=smooth_z,
+                )
 
             # 坐标范围：先应用，再画参考线（参考线需要用最终范围）
             _apply_limits(ax, global_limits, sp.limits)
@@ -205,10 +239,10 @@ def plot_training_curves_grid(
                 ax.xaxis.set_major_locator(ticker.MultipleLocator(sp.x_major_step))
 
             # 科研常用：y 轴支持科学计数（与 plot_demo.py 类似）
-            ax.yaxis.set_major_formatter(ticker.ScalarFormatter(useMathText=True))
-            ax.yaxis.get_major_formatter().set_scientific(True)
-            ax.yaxis.get_major_formatter().set_powerlimits((0, 0))
-            # 控制 offset 文本（如 1e3）的字号
+            formatter = ticker.ScalarFormatter(useMathText=False)
+            formatter.set_scientific(False)
+            formatter.set_useOffset(False)
+            ax.yaxis.set_major_formatter(formatter)
             ax.yaxis.get_offset_text().set_fontsize(fs.offset)
 
             # 先让 matplotlib 自动定一下范围，避免 get_xlim/get_ylim 是默认(0,1)
@@ -219,6 +253,9 @@ def plot_training_curves_grid(
             _apply_limits(ax, global_limits, sp.limits)
 
             _draw_reference_grid(ax, x_step=sp.x_major_step, y_step=sp.y_major_step)
+
+            # 保持所有子图都显示 x 轴刻度标签（数字）
+            ax.tick_params(axis="x", which="both", labelbottom=True)
 
             # 子图底部说明：支持全局策略 + 单图 override
             should_show = True
@@ -239,12 +276,15 @@ def plot_training_curves_grid(
                     fontsize=fs.xlabel_text,
                 )
 
-            # 若不是最后一行，隐藏 x tick labels（保持上面干净）
-            if row < nrows - 1:
-                ax.tick_params(axis="x", which="both", labelbottom=False)
 
             if show_legend:
-                ax.legend(loc=legend_loc, fontsize=fs.legend, frameon=False)
+                handles, labels = ax.get_legend_handles_labels()
+                if handles:
+                    priority_map = {c.label: c.priority for c in curves_sorted}
+                    order = sorted(range(len(handles)), key=lambda i: (-priority_map.get(labels[i], 0), i))
+                    handles = [handles[i] for i in order]
+                    labels = [labels[i] for i in order]
+                ax.legend(handles, labels, loc=legend_loc, fontsize=fs.legend, frameon=False)
 
     return fig, axs
 
@@ -256,7 +296,7 @@ if __name__ == "__main__":
 
     specs = build_specs_from_root(
         root,
-        ylabel="",  # 可按需填，比如 "Return" / "Loss"
+        ylabel="Task Success Rate (%)",  # 可按需填，比如 "Return" / "Loss"
         xlabel_text="Steps (in thousands)",
         smooth_window=21,
         mean_alpha=0.25,
@@ -290,11 +330,11 @@ if __name__ == "__main__":
         specs,
         nrows=nrows,
         ncols=ncols,
-        figsize=( 5.0 * ncols, 4 * nrows),
+        figsize=( 6 * ncols, 4 * nrows),
         global_limits=global_limits,
         hspace=0.35,
         wspace=0.15,
-        show_legend=True,
+        show_legend=False,
         legend_loc="upper right",
         xlabel_text_mode="leftmost",  # 关键：只在最左列显示横轴说明 text
     )
