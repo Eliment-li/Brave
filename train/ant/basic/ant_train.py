@@ -77,6 +77,7 @@ class Args:
     optimizer: str = "adam"
     optimizer_eps: float = 1e-7
     global_bonus: float= 10.0
+    brs_beta:float=1.1
 
     #others
     num_threads:int=-1

@@ -15,7 +15,6 @@ class AntBRSRewardWrapperV5(gym.Wrapper):
     ):
         super().__init__(env)
         self.global_bonus = global_bonus
-        print(f'global_bonus set to {self.global_bonus}')
         self.task = getattr(self.env.unwrapped, "task", None)
         if self.task not in {"stand", "speed", "far"}:
             raise ValueError(f"Unsupported task: {self.task}")
@@ -26,6 +25,8 @@ class AntBRSRewardWrapperV5(gym.Wrapper):
         self.episode_max = self._current_metric()
         self.rdcr = 0.0
         self.rdcr_max = 0.0
+        print(f'global_bonus set to {self.global_bonus}')
+        print(f'beta set to {self.beta}')
 
 
     def reset(self, **kwargs):
