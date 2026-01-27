@@ -20,7 +20,7 @@ plt.rcParams["ps.fonttype"] = 42
 
 LEGEND_SIZE = 20
 LABEL_SIZE = 24
-LINE_WIDTH = 1.0
+LINE_WIDTH = 0.5
 
 GRID_COLOR = "#cfcfcf"
 GRID_STYLE = "--"
@@ -38,7 +38,8 @@ class CurveSpec:
     """一条曲线 = 多个 runs，绘制 mean(更淡) + smooth(mean)(更实)。"""
     label: str
     color: str
-    runs: Sequence[np.ndarray]  # 每个 run: shape (T,)
+    runs: Sequence[np.ndarray]
+    steps: Optional[np.ndarray] = None
     smooth_window: int = 21     # odd 更自然；<=1 表示不平滑
     mean_alpha: float = 0.25
     smooth_alpha: float = 0.99
@@ -171,6 +172,7 @@ def plot_training_curves_grid(
 
             ax.set_title(sp.title, fontsize=fs.title, pad=10)
             ax.set_ylabel(sp.ylabel, fontsize=fs.label)
+            shared_x = _ensure_1d(sp.x) if sp.x is not None else None
 
             # 统一控制 tick 字号（x/y）
             ax.tick_params(axis="both", which="both", labelsize=fs.tick)
@@ -181,8 +183,11 @@ def plot_training_curves_grid(
             x_full = _ensure_1d(sp.x)
 
             for c in sp.curves:
-                # 所有 runs 共用同一列 steps：无需对齐；仅堆叠并丢弃全 NaN 的 step
-                xx, runs2d = align_runs_by_steps(x_full, c.runs, drop_all_nan_steps=True)
+                curve_steps = c.steps if c.steps is not None else shared_x
+                if curve_steps is None:
+                    raise ValueError("CurveSpec.steps 与 SubplotSpec.x 至少需提供一份 x 数据")
+                steps_1d = _ensure_1d(curve_steps)
+                xx, runs2d = align_runs_by_steps(steps_1d, c.runs, drop_all_nan_steps=True)
 
                 # 每个 step：忽略 NaN；一行多个值 => 取平均
                 mean = np.nanmean(runs2d, axis=0)
@@ -271,18 +276,21 @@ if __name__ == "__main__":
     nrows = (len(specs) + ncols - 1) // ncols
 
     # 可选：从所有子图的 x 推出全局 xlim（steps 已按 thousands 缩放）
-    all_xmins = [float(sp.x[0]) for sp in specs if sp.x is not None and len(sp.x) > 0]
-    all_xmaxs = [float(sp.x[-1]) for sp in specs if sp.x is not None and len(sp.x) > 0]
+    all_xmins, all_xmaxs = [], []
+    for sp in specs:
+        if sp.limits and sp.limits.xlim is not None:
+            all_xmins.append(sp.limits.xlim[0])
+            all_xmaxs.append(sp.limits.xlim[1])
     global_limits = AxisLimit(
         xlim=(min(all_xmins), max(all_xmaxs)) if all_xmins and all_xmaxs else None,
-        ylim=None,  # y 轴通常不强行统一；如需要可填
+        ylim=None,
     )
 
     fig, _ = plot_training_curves_grid(
         specs,
         nrows=nrows,
         ncols=ncols,
-        figsize=( 10.0 * ncols, 8 * nrows),
+        figsize=( 5.0 * ncols, 4 * nrows),
         global_limits=global_limits,
         hspace=0.35,
         wspace=0.15,

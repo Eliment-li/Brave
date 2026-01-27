@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
-
+import math
 import numpy as np
 
 # 仅做类型引用/构造用：避免循环 import 放函数内
@@ -155,6 +155,14 @@ def _default_color_cycle() -> List[str]:
     ]
 
 
+def _round_up_to_base(value: float, base: float) -> float:
+    if base <= 0:
+        raise ValueError("x_axis_round_base 必须为正数")
+    if not math.isfinite(value) or value <= 0:
+        return base
+    return max(base, math.ceil(value / base) * base)
+
+
 def build_specs_from_root(
     root: str | Path,
     *,
@@ -168,6 +176,7 @@ def build_specs_from_root(
     algo_allowlist: Optional[Sequence[str]] = None,
     algo_display_name: Optional[Dict[str, str]] = None,
     algo_color: Optional[Dict[str, str]] = None,
+    x_axis_round_base: float = 1e5,
 ):
     """
     扫描目录结构：
@@ -183,7 +192,7 @@ def build_specs_from_root(
       - 每个 algo.csv => 一个 CurveSpec（label=algo 名）
       - CSV: steps + 多列 runs
     """
-    from .plot_train_data import CurveSpec, SubplotSpec  # 延迟 import
+    from .plot_train_data import AxisLimit, CurveSpec, SubplotSpec  # 延迟 import
 
     r = Path(root)
     if not r.exists():
@@ -199,6 +208,7 @@ def build_specs_from_root(
     algo_color = algo_color or {}
 
     specs = []
+    scale = 1000.0 if steps_in_thousands else 1.0
     for env_dir in env_dirs:
         csv_files = sorted(env_dir.glob("*.csv"), key=lambda p: p.stem)
         if algo_allowlist is not None:
@@ -206,10 +216,14 @@ def build_specs_from_root(
             csv_files = [p for p in csv_files if p.stem in allow_algo]
 
         curves = []
+        x_reference = None
+        max_step_in_env = 0.0
         for k, csv_path in enumerate(csv_files):
             steps, runs = read_steps_and_runs_csv(csv_path)
-            x = steps / 1000.0 if steps_in_thousands else steps
-
+            x_scaled = steps / scale
+            if x_reference is None:
+                x_reference = x_scaled
+            max_step_in_env = max(max_step_in_env, float(np.nanmax(steps)))
             algo = csv_path.stem
             label = algo_display_name.get(algo, algo)
             color = algo_color.get(algo, colors[k % len(colors)])
@@ -222,19 +236,21 @@ def build_specs_from_root(
                     smooth_window=smooth_window,
                     mean_alpha=mean_alpha,
                     smooth_alpha=smooth_alpha,
+                    steps=x_scaled,
                 )
             )
-
         if not curves:
             continue
-
+        rounded_max = _round_up_to_base(max_step_in_env, x_axis_round_base)
+        xlim = (0.0, rounded_max / scale)
         specs.append(
             SubplotSpec(
                 title=env_dir.name,
                 ylabel=ylabel,
                 curves=curves,
                 xlabel_text=xlabel_text,
-                x=x,
+                x=x_reference,
+                limits=AxisLimit(xlim=xlim),
             )
         )
 
