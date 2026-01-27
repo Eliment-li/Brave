@@ -18,7 +18,7 @@ class FetchTaskBRSRewardWrapper(BRSRewardWrapperBaseV2):
         env: gym.Env,
         task: str | None = None,
         gamma: float = 0.99,
-        beta: float = 1.1,
+        beta: float = 1.01,
         min_bonus: float = 0.01,
         use_global_max_bonus: bool = False,
         global_bonus: float | None = None,

@@ -55,6 +55,7 @@ class Args:
     # brave
     global_bonus: float = 10
     use_global_max_bonus: bool = True
+    brs_beta:float = 1.01
 
     # rnd_feature_dim: int = 128
     # rnd_hidden_sizes: tuple[int, ...] = (256, 256)
@@ -132,6 +133,7 @@ def add_reward_wrapper(env, args):
                 task=args.task,
                 use_global_max_bonus=args.use_global_max_bonus,
                 global_bonus=args.global_bonus,
+                beta=args.brs_beta,
             )
         case 'explors':
             env = FetchExploRSRewardWrapper(

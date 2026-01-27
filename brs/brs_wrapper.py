@@ -135,6 +135,7 @@ class BRSRewardWrapperBaseV2(gym.Wrapper):
 
         self.gamma = float(gamma)
         self.beta = float(beta)
+        print(f'set beta to{self.beta}')
         self.min_bonus = float(min_bonus)
 
         self.use_global_max_bonus = bool(use_global_max_bonus)
