@@ -123,9 +123,4 @@ Some scripts support experiment tracking via `swanlab` (see `--track`, `--swanla
 python -m train.fetch.fetch_train --help
 ```
 
-3) **`main.py` is empty**
-- This repo currently behaves more like a collection of scripts. Start from the environment-specific entrypoints under `train/`.
 
-## License
-
-If there is no license declared at the repo root, it should be treated as “all rights reserved”. If you plan to open-source it, consider adding a `LICENSE` file.

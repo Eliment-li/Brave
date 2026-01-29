@@ -123,9 +123,4 @@ python -m train.ant.basic.smoke_test
 python -m train.fetch.fetch_train --help
 ```
 
-3) **`main.py` 为空**
-- 这个仓库当前更像“脚本集合”，建议从 `train/` 下对应环境入口开始跑。
 
-## License
-
-未在仓库根目录声明 License 时，默认视为“未授权”。如需开源发布，建议补充 LICENSE 文件。
