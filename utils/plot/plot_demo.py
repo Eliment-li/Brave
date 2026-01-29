@@ -25,6 +25,9 @@ line_width = 1.5
 v6=[]
 v7=[]
 dpi = 500
+
+# NEW: 统一控制 y-label 左对齐/距离（越小越靠左）
+YLABEL_X = -0.10
 # Custom formatter function
 def time_formatter(x,pos):
     if x <3600:
@@ -330,7 +333,7 @@ if __name__ == '__main__':
     plot3()
     plot4()
 
-    align_ylabels_left(axs)
+    align_ylabels_left(axs, label_x_position=YLABEL_X)
     rootdir = get_root_dir()
     path = rootdir + '\\results\\fig\\brb.png'
     plt.savefig(path, dpi=dpi, bbox_inches='tight')

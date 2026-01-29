@@ -10,6 +10,7 @@ import matplotlib.ticker as ticker
 
 from utils.plot.csv_util import build_specs_from_root
 from utils.plot.csv_util import align_runs_by_steps  # <- 新增
+from utils.plot.csv_util import read_step_and_columns_csv  # <- 新增
 
 # 参考 plot_demo.py 的全局风格
 plt.rcParams["font.family"] = "Times New Roman"
@@ -289,6 +290,97 @@ def plot_training_curves_grid(
     return fig, axs
 
 
+def plot_csv_as_figure(
+    csv_path: str,
+    *,
+    title: str = "",
+    ylabel: str = "",
+    xlabel: str = "Steps",
+    step_col: str = "step",
+    steps_scale: float = 1.0,
+    dedup: str = "last",
+    figsize: Tuple[float, float] = (10, 6),
+    dpi: int = 300,
+    line_width: float = 1.5,
+    alpha: float = 0.99,
+    grid_x_step: Optional[float] = None,
+    grid_y_step: Optional[float] = None,
+    legend: bool = True,
+    legend_loc: str = "upper right",
+    font_sizes: Optional[FontSizes] = None,
+    save_path: Optional[str] = None,
+) -> Tuple[plt.Figure, plt.Axes]:
+    """Plot one CSV as one figure.
+
+    Requirements (per user):
+      1) step column is x-axis (may be non-contiguous)
+      2) each other column is one curve (no averaging across runs)
+      3) keep style similar to plot_demo.py
+    """
+    fs = font_sizes or FontSizes()
+
+    with mpl.rc_context({"font.size": fs.base}):
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+        steps, series = read_step_and_columns_csv(
+            csv_path,
+            step_col=step_col,
+            dedup=dedup,
+            steps_scale=steps_scale,
+        )
+
+        colors = [
+            "#ab3a29",
+            "#1e7c4a",
+            "#13679e",
+            "#d07f2c",
+            "#e5a2c4",
+            "#1565c0",
+            "#df6172",
+        ]
+
+        for i, (name, y) in enumerate(series.items()):
+            ax.plot(
+                steps,
+                np.asarray(y, dtype=float),
+                linewidth=line_width,
+                alpha=alpha,
+                color=colors[i % len(colors)],
+                label=str(name),
+            )
+
+        if title:
+            ax.set_title(title, fontsize=fs.title, pad=10)
+        if ylabel:
+            ax.set_ylabel(ylabel, fontsize=fs.label)
+        if xlabel:
+            ax.set_xlabel(xlabel, fontsize=fs.label)
+
+        ax.tick_params(axis="both", which="both", labelsize=fs.tick)
+
+        # autoscale first
+        ax.relim()
+        ax.autoscale_view()
+
+        # reference grid in plot_demo.py style
+        _draw_reference_grid(ax, x_step=grid_x_step, y_step=grid_y_step)
+
+        # y-axis formatter similar to plot_training_curves_grid defaults
+        formatter = ticker.ScalarFormatter(useMathText=False)
+        formatter.set_scientific(False)
+        formatter.set_useOffset(False)
+        ax.yaxis.set_major_formatter(formatter)
+        ax.yaxis.get_offset_text().set_fontsize(fs.offset)
+
+        if legend:
+            ax.legend(loc=legend_loc, fontsize=fs.legend, frameon=False)
+
+        if save_path:
+            fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
+
+        return fig, ax
+
+
 if __name__ == "__main__":
     # ===== 从 root/env/algo.csv 扫描读取并绘图 =====
 
@@ -338,5 +430,24 @@ if __name__ == "__main__":
         legend_loc="upper right",
         xlabel_text_mode="leftmost",  # 关键：只在最左列显示横轴说明 text
     )
-    plt.savefig("train_curves.png", dpi=300, bbox_inches="tight")
+    plt.savefig("train_curves.pdf", dpi=300, bbox_inches="tight")
     plt.show()
+
+    # ===== 单个 CSV文件绘图示例 =====
+    # plot_csv_as_figure(
+    #     r"D:\test\envA_algoA.csv",
+    #     title="Env A - Algo A",
+    #     ylabel="Success Rate (%)",
+    #     xlabel="Steps (in thousands)",
+    #     steps_scale=1e-3,
+    #     figsize=(10, 6),
+    #     dpi=300,
+    #     line_width=1.5,
+    #     alpha=0.99,
+    #     grid_x_step=1,
+    #     grid_y_step=5,
+    #     legend=True,
+    #     legend_loc="upper right",
+    #     font_sizes=FontSizes(base=18, title=20, label=18, tick=14, legend=LEGEND_SIZE, xlabel_text=14, offset=16),
+    #     save_path="envA_algoA_plot.png",
+    # )

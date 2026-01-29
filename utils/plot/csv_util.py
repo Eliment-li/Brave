@@ -261,3 +261,103 @@ def build_specs_from_root(
 
     return specs
 
+
+def read_step_and_columns_csv(
+    csv_path: str | Path,
+    *,
+    step_col: str = "step",
+    delimiter: str = ",",
+    skip_header: bool = True,
+    dedup: str = "last",
+    steps_scale: float = 1.0,
+    columns_allowlist: Optional[Sequence[str]] = None,
+    columns_blocklist: Optional[Sequence[str]] = None,
+) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
+    """Read a CSV where one file corresponds to one figure.
+
+    Expected format:
+      - One column named by `step_col` (default: 'step') for x-axis.
+      - Every other numeric column is a curve (no averaging).
+
+    Returns:
+      steps: shape (T,), sorted ascending and scaled by `steps_scale`.
+      series: dict[name -> values], each shape (T,), aligned with steps.
+
+    Notes:
+      - `step` does NOT need to be contiguous.
+      - If duplicated steps exist, `dedup` controls how to resolve: mean/last/first.
+      - Non-numeric columns are ignored.
+    """
+    import pandas as pd
+
+    p = Path(csv_path)
+    if not p.exists():
+        raise FileNotFoundError(str(p))
+
+    if dedup not in ("mean", "last", "first"):
+        raise ValueError(f"dedup 仅支持 mean/last/first，得到: {dedup}")
+
+    df = pd.read_csv(p, delimiter=delimiter)
+    if df.empty:
+        raise ValueError(f"CSV 为空: {p}")
+
+    # Normalize column names a bit (strip spaces)
+    df.columns = [str(c).strip() for c in df.columns]
+
+    if step_col not in df.columns:
+        raise ValueError(f"CSV 缺少 step 列 '{step_col}': {p}")
+
+    # Keep numeric columns only (besides step)
+    step = pd.to_numeric(df[step_col], errors="coerce")
+
+    cols = [c for c in df.columns if c != step_col]
+    if columns_allowlist is not None:
+        allow = set(columns_allowlist)
+        cols = [c for c in cols if c in allow]
+    if columns_blocklist is not None:
+        block = set(columns_blocklist)
+        cols = [c for c in cols if c not in block]
+
+    if not cols:
+        raise ValueError(f"CSV 中除了 '{step_col}' 外没有可用列: {p}")
+
+    series_df = df[cols].apply(pd.to_numeric, errors="coerce")
+
+    # Drop rows where step is NaN or all series are NaN
+    mask = step.notna() & series_df.notna().any(axis=1)
+    if not mask.any():
+        raise ValueError(f"CSV 没有有效数据行: {p}")
+
+    step = step[mask]
+    series_df = series_df.loc[mask]
+
+    # Sort by step (stable)
+    order = step.argsort(kind="mergesort")
+    step = step.iloc[order].reset_index(drop=True)
+    series_df = series_df.iloc[order].reset_index(drop=True)
+
+    # Dedup by step if needed
+    if step.duplicated().any():
+        temp = pd.concat({step_col: step, "__idx__": pd.RangeIndex(len(step))}, axis=1)
+        temp = pd.concat([temp, series_df], axis=1)
+        if dedup == "mean":
+            grouped = temp.groupby(step_col, as_index=False).mean(numeric_only=True)
+        elif dedup == "first":
+            grouped = temp.groupby(step_col, as_index=False).first()
+        else:  # last
+            grouped = temp.groupby(step_col, as_index=False).last()
+        step = grouped[step_col]
+        series_df = grouped[cols]
+
+    steps_np = step.to_numpy(dtype=float) / float(steps_scale)
+    out: Dict[str, np.ndarray] = {}
+    for c in cols:
+        col = series_df[c].to_numpy(dtype=float)
+        # keep columns that have at least one finite value
+        if np.isfinite(col).any():
+            out[c] = col
+
+    if not out:
+        raise ValueError(f"CSV 没有任何可用的数值列(除了 '{step_col}'): {p}")
+
+    return steps_np, out
